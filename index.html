@@ -1582,8 +1582,8 @@ const Weapon3D = (function(){
     const diff = angleDiff(brg, heading);
     if(Math.abs(diff) > FOV/2 + 10) return { visible:false, bearing:brg, dist, diff };
     const xPct = 50 + (diff/(FOV/2))*50;
-    const scale = Math.max(0.35, Math.min(1.15, 40/Math.max(dist,8)));
-    const yPct = 52 + (1-scale)*18;
+    const scale = Math.max(0.5, Math.min(1.15, 40/Math.max(dist,8)));
+    const yPct = 50 + (1-scale)*6;
     return { visible: Math.abs(diff) <= FOV/2, xPct, yPct, scale, bearing:brg, dist, diff };
   }
 

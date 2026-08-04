@@ -33,6 +33,19 @@
     font-family:'Share Tech Mono', monospace; color:var(--text);}
   .display{font-family:'Orbitron', sans-serif;}
 
+  /* CENTINELA está diseñado para usarse siempre en vertical: apuntas girando el
+     cuerpo (brújula), no el teléfono. Si el teléfono queda en horizontal por
+     accidente, esto rota toda la página (cámara incluida) para que se vea
+     correctamente en vez de mostrar la imagen ladeada. */
+  @media screen and (orientation: landscape){
+    html{
+      width:100vh; height:100vw;
+      transform:rotate(90deg); transform-origin:top left;
+      position:absolute; top:0; left:100%;
+      overflow:hidden;
+    }
+  }
+
   #stage{position:fixed; inset:0; overflow:hidden;}
   #stage.shake{animation:screenShake 0.32s ease;}
   @keyframes screenShake{

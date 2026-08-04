@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>CENTINELA // Protocolo de Realidad Táctica</title>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0c0806">
 <meta name="mobile-web-app-capable" content="yes">
@@ -297,6 +298,31 @@
   .radarDot.close{background:var(--danger);}
   .radarDot.boss{background:var(--danger); width:9px; height:9px; box-shadow:0 0 6px rgba(232,17,45,0.9);}
   #radarSelf{position:absolute; top:50%; left:50%; width:5px; height:5px; background:var(--cyan); border-radius:50%; transform:translate(-50%,-50%);}
+  #radar{pointer-events:auto; cursor:pointer;}
+  #radarHint{position:absolute; bottom:2px; left:0; right:0; text-align:center; font-size:7px;
+    letter-spacing:1px; color:var(--text-dim); font-family:'Orbitron',sans-serif;}
+
+  /* ===== MAPA TÁCTICO ===== */
+  #mapPanel{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(90vw, 380px); height:min(60vh, 420px); z-index:30; display:none;
+    flex-direction:column; border:1px solid var(--cyan); background:rgba(10,5,3,0.95); pointer-events:auto;
+    box-shadow:0 0 40px rgba(0,0,0,0.8);}
+  #mapPanel.show{display:flex;}
+  #mapHeader{display:flex; justify-content:space-between; align-items:center; padding:8px 10px;
+    font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--cyan);
+    border-bottom:1px solid var(--panel-edge);}
+  #closeMapBtn{background:transparent; border:1px solid var(--danger); color:var(--danger);
+    font-family:'Orbitron',sans-serif; font-size:9px; letter-spacing:1px; padding:4px 8px; cursor:pointer; border-radius:2px;}
+  #tacticalMap{flex:1; width:100%; background:#0a0503;}
+  /* Tematizar las teselas de OpenStreetMap para que combinen con el HUD */
+  #tacticalMap .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) saturate(0.5) brightness(0.75) contrast(1.15) sepia(0.35);}
+  #tacticalMap .leaflet-container{background:#0a0503;}
+  #tacticalMap .leaflet-control-attribution{background:rgba(10,5,3,0.7); color:var(--text-dim); font-size:8px;}
+  #tacticalMap .leaflet-control-attribution a{color:var(--text-dim);}
+  .mapDot{border-radius:50%; border:2px solid var(--amber); background:rgba(196,214,0,0.3);}
+  .mapDot.boss{border-color:var(--danger); background:rgba(232,17,45,0.4);}
+  .mapDot.self{border-color:var(--cyan); background:var(--cyan);}
+  .mapDot.pickup{border-color:var(--gold); background:rgba(255,202,58,0.35); border-radius:0; transform:rotate(45deg);}
 
   #secondaryControls{position:absolute; top:195px; right:16px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; pointer-events:auto;}
   #secondaryControls .smallBtn{width:auto; height:auto; border-radius:4px; padding:6px 10px; font-size:8px;}
@@ -427,6 +453,11 @@
   <div class="tutSection">
     <h3>MISIONES Y RECOMPENSAS</h3>
     <p>Cada día tienes 3 misiones nuevas. Al completarlas ganas tokens que puedes gastar tú mismo en bonificaciones para tu próxima partida, desde la pantalla de inicio.</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>MAPA TÁCTICO</h3>
+    <p>Toca el radar (círculo abajo a la derecha) para abrir un mapa con las calles reales de tu zona, mostrando la posición exacta de los hostiles y potenciadores a tu alrededor. Vuelve a tocarlo o usa CERRAR para volver al combate.</p>
   </div>
 
   <div class="tutSection">
@@ -580,10 +611,18 @@
   <div id="rightPanel">
     <div id="weaponLabel">RIFLE</div>
     <div id="ammoBox"><span id="ammoNum">12</span><span id="ammoDen">/12</span><span id="reserveNum">RESERVA 48</span></div>
-    <div id="radar"><div id="radarSweep"></div><div id="radarSelf"></div></div>
+    <div id="radar" title="Tocar para abrir el mapa"><div id="radarSweep"></div><div id="radarSelf"></div><div id="radarHint">MAPA</div></div>
   </div>
 
   <div id="weaponView"></div>
+
+  <div id="mapPanel">
+    <div id="mapHeader">
+      <span>MAPA TÁCTICO</span>
+      <button id="closeMapBtn">CERRAR ✕</button>
+    </div>
+    <div id="tacticalMap"></div>
+  </div>
 
   <div id="secondaryControls">
     <button class="smallBtn" id="pingBtn">PING</button>
@@ -608,6 +647,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 // ===== WEAPON 3D VIEWMODEL =====
 // Low-poly first-person weapon model rendered with Three.js over the camera feed.
@@ -1000,6 +1040,9 @@ const Weapon3D = (function(){
   const ammoDen = document.getElementById('ammoDen');
   const reserveNum = document.getElementById('reserveNum');
   const radar = document.getElementById('radar');
+  const mapPanel = document.getElementById('mapPanel');
+  const closeMapBtn = document.getElementById('closeMapBtn');
+  const tacticalMapEl = document.getElementById('tacticalMap');
   const fireBtn = document.getElementById('fireBtn');
   const reloadBtn = document.getElementById('reloadBtn');
   const pingBtn = document.getElementById('pingBtn');
@@ -1705,6 +1748,74 @@ const Weapon3D = (function(){
     window.__lockedTarget = anyLocked ? closestVisible : null;
   }
 
+  // ---------- MAPA TÁCTICO (Leaflet + OpenStreetMap) ----------
+  let tacticalMap = null, mapMarkers = [], mapSelfMarker = null, mapVisible = false, mapUpdateTimer = null;
+
+  function makeDotIcon(cls, size){
+    return L.divIcon({
+      className: '', html: '<div class="mapDot ' + cls + '" style="width:' + size + 'px;height:' + size + 'px"></div>',
+      iconSize: [size, size], iconAnchor: [size/2, size/2]
+    });
+  }
+
+  function initTacticalMap(){
+    if(tacticalMap || !window.L) return;
+    const center = playerPos ? [playerPos.lat, playerPos.lon] : [19.4326, -99.1332];
+    tacticalMap = L.map(tacticalMapEl, {
+      zoomControl:false, attributionControl:true, dragging:true, scrollWheelZoom:false
+    }).setView(center, 17);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap'
+    }).addTo(tacticalMap);
+    mapSelfMarker = L.marker(center, { icon: makeDotIcon('self', 12) }).addTo(tacticalMap);
+  }
+
+  function updateTacticalMap(){
+    if(!tacticalMap || !mapVisible) return;
+    // En modo simulación no hay coordenadas reales que mostrar.
+    if(simMode || !playerPos) return;
+
+    mapSelfMarker.setLatLng([playerPos.lat, playerPos.lon]);
+    mapMarkers.forEach(m => tacticalMap.removeLayer(m));
+    mapMarkers = [];
+
+    enemies.forEach(en=>{
+      const isBoss = BOSS_TYPES.includes(en.type);
+      const m = L.marker([en.lat, en.lon], { icon: makeDotIcon(isBoss?'boss':'', isBoss?16:11) }).addTo(tacticalMap);
+      m.bindTooltip((ENEMY_TYPES[en.type]||{}).label || 'HOSTIL', { direction:'top', offset:[0,-8] });
+      mapMarkers.push(m);
+    });
+    pickups.forEach(pk=>{
+      const m = L.marker([pk.lat, pk.lon], { icon: makeDotIcon('pickup', 10) }).addTo(tacticalMap);
+      m.bindTooltip((PICKUP_TYPES[pk.type]||{}).label || 'POTENCIADOR', { direction:'top', offset:[0,-8] });
+      mapMarkers.push(m);
+    });
+  }
+
+  function openTacticalMap(){
+    if(!window.L){ killMsg('MAPA NO DISPONIBLE SIN CONEXIÓN', 'danger'); return; }
+    initTacticalMap();
+    mapPanel.classList.add('show');
+    mapVisible = true;
+    setTimeout(()=>{
+      if(tacticalMap){
+        tacticalMap.invalidateSize();
+        if(playerPos && !simMode) tacticalMap.setView([playerPos.lat, playerPos.lon], 17);
+      }
+      updateTacticalMap();
+    }, 60);
+    if(mapUpdateTimer) clearInterval(mapUpdateTimer);
+    mapUpdateTimer = setInterval(updateTacticalMap, 1500);
+  }
+  function closeTacticalMap(){
+    mapPanel.classList.remove('show');
+    mapVisible = false;
+    if(mapUpdateTimer){ clearInterval(mapUpdateTimer); mapUpdateTimer = null; }
+  }
+
+  radar.addEventListener('click', ()=>{ mapVisible ? closeTacticalMap() : openTacticalMap(); });
+  closeMapBtn.addEventListener('click', closeTacticalMap);
+
   // ---------- DAMAGE TICK ----------
   let lastDamageTick = performance.now();
   function damageTick(now){
@@ -1986,6 +2097,7 @@ const Weapon3D = (function(){
     [syncTimer, enemySyncTimer, pingTimer, pickupTimer, timeFilterTimer].forEach(t=>{ if(t) clearInterval(t); });
     syncTimer = enemySyncTimer = pingTimer = pickupTimer = timeFilterTimer = null;
     dangerPulse.classList.remove('active'); heartbeatActive = false;
+    closeTacticalMap();
   }
 
   function resetState(){

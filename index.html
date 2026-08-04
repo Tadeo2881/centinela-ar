@@ -69,10 +69,11 @@
 
   /* ===== START SCREEN ===== */
   #startScreen{position:fixed; inset:0; z-index:50; background:radial-gradient(ellipse at 50% 20%, #1a0f08 0%, #0a0503 75%);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center; overflow-y:auto;}
-  #startScreen h1{font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(28px,9vw,44px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:11px; padding:20px; text-align:center; overflow-y:auto;}
+  #startScreen h1{font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(26px,8vw,38px);
     letter-spacing:4px; margin:0; color:var(--cyan); text-shadow:0 0 18px rgba(255,122,26,0.55);}
-  #startScreen .sub{color:var(--text-dim); letter-spacing:3px; font-size:12px; margin-top:-14px;}
+  #startScreen .sub{color:var(--text-dim); letter-spacing:3px; font-size:11px; margin-top:-12px;}
+  .brackets{padding:14px 22px !important;}
   #startScreen p.desc{max-width:340px; color:var(--text-dim); font-size:13px; line-height:1.6;}
   #startScreen p.mpnote{max-width:340px; color:var(--amber); font-size:11px; line-height:1.6; letter-spacing:0.5px;}
   #rankLine{font-family:'Orbitron',sans-serif; font-size:12px; letter-spacing:2px; color:var(--gold);}
@@ -191,7 +192,8 @@
   #statusLines .err{color:var(--danger);}
 
   #leaderboardPanel{position:absolute; top:70px; right:16px; width:154px; font-size:9px;
-    background:var(--panel); border:1px solid var(--panel-edge); padding:8px; pointer-events:none;}
+    background:var(--panel); border:1px solid var(--panel-edge); padding:8px; pointer-events:none; display:none;}
+  #leaderboardPanel.show{display:block;}
   #leaderboardPanel .lbHead{color:var(--cyan); font-family:'Orbitron',sans-serif; font-size:9px; letter-spacing:1.5px; margin-bottom:5px; display:flex; justify-content:space-between;}
   #leaderboardPanel .lbRow{display:flex; justify-content:space-between; align-items:center; color:var(--text-dim); line-height:1.7;}
   #leaderboardPanel .lbRow.me{color:var(--amber);}
@@ -225,6 +227,23 @@
   #reticle.locked .tick{stroke:var(--danger);}
   #lockLabel{position:absolute; top:50%; left:50%; transform:translate(-50%, 22px); font-size:9px; letter-spacing:2px; color:var(--danger); opacity:0; font-family:'Orbitron',sans-serif;}
   #reticle.locked #lockLabel{opacity:1;}
+
+  /* Feedback de impacto: pulso del retículo + número de daño flotante */
+  #reticle.hitPulse{animation:reticleHit 0.18s ease-out;}
+  @keyframes reticleHit{0%{transform:translate(-50%,-50%) scale(1);} 45%{transform:translate(-50%,-50%) scale(1.28);} 100%{transform:translate(-50%,-50%) scale(1);}}
+  #hud.scoped #reticle.hitPulse{animation:reticleHitScoped 0.18s ease-out;}
+  @keyframes reticleHitScoped{0%{transform:translate(-50%,-50%) scale(0.6);} 45%{transform:translate(-50%,-50%) scale(0.8);} 100%{transform:translate(-50%,-50%) scale(0.6);}}
+
+  .dmgPop{position:absolute; top:44%; transform:translateX(-50%); pointer-events:none;
+    font-family:'Orbitron',sans-serif; font-weight:700; font-size:15px; color:var(--gold);
+    text-shadow:0 0 8px rgba(0,0,0,0.9); animation:dmgFloat 0.7s ease-out forwards; white-space:nowrap;}
+  .dmgPop.resisted{color:var(--text-dim); font-size:12px;}
+  @keyframes dmgFloat{
+    0%{opacity:0; transform:translate(-50%,6px) scale(0.8);}
+    20%{opacity:1; transform:translate(-50%,-4px) scale(1.1);}
+    100%{opacity:0; transform:translate(-50%,-34px) scale(1);}}
+
+  .marker.hitFlash .box{background:rgba(255,255,255,0.55); border-color:#fff !important;}
 
   .hitLine{position:absolute; height:2px; background:linear-gradient(90deg, rgba(232,17,45,0.95), rgba(232,17,45,0));
     transform-origin:0 50%; pointer-events:none; animation:hitFade .3s ease forwards;}
@@ -488,7 +507,7 @@
   </details>
 
   <div id="rewardsPanel">
-    <details open>
+    <details>
       <summary><span>RECOMPENSAS</span><span id="tokensLeft">0 disponibles</span></summary>
       <div class="rBody">
         <div class="rHint">Cada misión completada te da 1 token. Elige tú qué bonificación llevar a tu próxima partida.</div>
@@ -524,7 +543,7 @@
 
   <div id="leaderboardPanel">
     <div class="lbHead"><span>OPERATIVOS</span><span id="lbAmenaza">·</span></div>
-    <div id="lbList"><div class="lbEmpty">sincronizando…</div></div>
+    <div id="lbList"></div>
   </div>
 
   <div id="killfeed"></div>
@@ -1001,6 +1020,7 @@ const Weapon3D = (function(){
   const restartBtn = document.getElementById('restartBtn');
   const callsignInput = document.getElementById('callsignInput');
   const lbList = document.getElementById('lbList');
+  const leaderboardPanel = document.getElementById('leaderboardPanel');
   const lbAmenaza = document.getElementById('lbAmenaza');
   const rankLine = document.getElementById('rankLine');
   const missionsList = document.getElementById('missionsList');
@@ -1275,6 +1295,10 @@ const Weapon3D = (function(){
   function sfxShotHeavy(){ noiseBurst(0.09,0.3); beep(90,0.12,'square',0.1); }
   function sfxHit(){ beep(90,0.15,'sine',0.25); }
   function sfxKill(){ beep(520,0.08,'triangle',0.2); setTimeout(()=>beep(780,0.09,'triangle',0.18),70); }
+  function sfxImpact(resisted){
+    if(resisted){ beep(150,0.07,'square',0.14); noiseBurst(0.03,0.08); }
+    else { beep(420,0.05,'triangle',0.12); }
+  }
   function sfxReload(){ beep(300,0.07,'square',0.08); }
   function sfxNoAmmo(){ beep(110,0.05,'square',0.06); }
   function sfxAlert(pan){ beep(880,0.12,'sawtooth',0.14,pan); }
@@ -1526,6 +1550,17 @@ const Weapon3D = (function(){
     pickups = pickups.filter(pk => now - pk.spawnedAt < 25000);
   }
 
+  function showHitFeedback(amount, resisted){
+    const el = document.createElement('div');
+    el.className = 'dmgPop' + (resisted ? ' resisted' : '');
+    el.textContent = '-' + amount + (resisted ? ' BLINDADO' : '');
+    el.style.left = (50 + (Math.random()*10-5)) + '%';
+    hud.appendChild(el);
+    setTimeout(()=>el.remove(), 700);
+
+    reticle.classList.remove('hitPulse'); void reticle.offsetWidth; reticle.classList.add('hitPulse');
+  }
+
   function showHitLine(xPct, yPct){
     const w = window.innerWidth, h = window.innerHeight;
     const x1 = w*xPct/100, y1 = h*yPct/100, x2 = w/2, y2 = h/2;
@@ -1636,7 +1671,8 @@ const Weapon3D = (function(){
 
       const cfg = ENEMY_TYPES[en.type];
       const m = document.createElement('div');
-      m.className = 'marker type-' + en.type + (en.elite?' elite':'') + (inReticle?' inreticle':'');
+      m.className = 'marker type-' + en.type + (en.elite?' elite':'') + (inReticle?' inreticle':'') +
+        ((en.hitFlashUntil && now < en.hitFlashUntil) ? ' hitFlash' : '');
       m.style.left = p.xPct + '%'; m.style.top = p.yPct + '%';
       m.style.transform = 'translate(-50%,-50%) scale(' + p.scale.toFixed(2) + ')';
       let tagText = (en.elite?'ÉLITE ':'') + cfg.label + ' · ' + Math.round(p.dist) + 'm';
@@ -1715,7 +1751,7 @@ const Weapon3D = (function(){
       leaderboard = current;
       renderLeaderboard();
       checkAllies();
-    }catch(e){ lbList.innerHTML = '<div class="lbEmpty">sin conexión</div>'; }
+    }catch(e){ leaderboardPanel.classList.remove('show'); }
   }
 
   function checkAllies(){
@@ -1731,7 +1767,10 @@ const Weapon3D = (function(){
 
   function renderLeaderboard(){
     const entries = Object.entries(leaderboard).sort((a,b)=> b[1].score - a[1].score).slice(0, 6);
-    if(entries.length === 0){ lbList.innerHTML = '<div class="lbEmpty">sin operativos activos</div>'; lbAmenaza.textContent = '·'; return; }
+    // Solo tiene sentido mostrar el panel si hay OTROS operativos además de mí.
+    const others = entries.filter(([name]) => name !== callsign);
+    if(others.length === 0){ leaderboardPanel.classList.remove('show'); return; }
+    leaderboardPanel.classList.add('show');
     const maxWave = Math.max(...entries.map(e=>e[1].wave||1));
     lbAmenaza.textContent = 'OLA MÁX ' + maxWave;
     lbList.innerHTML = entries.map(([name, data])=>{
@@ -1859,6 +1898,9 @@ const Weapon3D = (function(){
         const resist = ENEMY_TYPES[en.type].resist ? (ENEMY_TYPES[en.type].resist[currentWeapon] || 1) : 1;
         const dmg = w.damage * (Date.now() < damageBoostUntil ? 2 : 1) * resist;
         en.hp -= dmg; en.updatedAt = Date.now();
+        en.hitFlashUntil = Date.now() + 140;
+        showHitFeedback(Math.round(dmg), resist < 1);
+        sfxImpact(resist < 1);
         if(en.hp <= 0){
           enemies = enemies.filter(e=>e.id !== en.id);
           recentlyKilled.set(en.id, Date.now());

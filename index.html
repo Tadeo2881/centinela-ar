@@ -159,7 +159,7 @@
   #comboRow{font-size:9px; letter-spacing:1px; color:var(--gold); font-family:'Orbitron',sans-serif; min-height:12px;}
   #boostRow{font-size:9px; letter-spacing:1px; color:var(--gold); font-family:'Orbitron',sans-serif; min-height:12px;}
 
-  #weaponView{position:absolute; right:6px; bottom:-6px; width:190px; height:150px; pointer-events:none; z-index:15;}
+  #weaponView{position:absolute; left:6px; bottom:-6px; width:150px; height:120px; pointer-events:none; z-index:15;}
   .weaponModel{position:absolute; inset:0; display:none; opacity:0.9;}
   .weaponModel.active{display:block; animation: weaponBob 2.6s ease-in-out infinite;}
   .weaponModel svg{width:100%; height:100%; overflow:visible;}
@@ -173,7 +173,7 @@
   .weaponModel.reloadSpin.type-sniper{animation-duration:1.8s;}
   @keyframes weaponReload{0%{transform:translateY(0) rotate(0);} 30%{transform:translateY(22px) rotate(-14deg);} 60%{transform:translateY(26px) rotate(-9deg);} 100%{transform:translateY(0) rotate(0);}}
 
-  #rightPanel{position:absolute; right:16px; bottom:100px; display:flex; flex-direction:column; align-items:flex-end; gap:10px;}
+  #rightPanel{position:absolute; right:16px; bottom:112px; display:flex; flex-direction:column; align-items:flex-end; gap:10px;}
   #weaponLabel{font-size:9px; color:var(--text-dim); letter-spacing:1.5px;}
   #ammoBox{font-family:'Orbitron',sans-serif; text-align:right;}
   #ammoNum{font-size:28px; font-weight:900; color:var(--cyan); line-height:1;}
@@ -188,7 +188,8 @@
   .radarDot.boss{background:var(--danger); width:9px; height:9px; box-shadow:0 0 6px rgba(232,17,45,0.9);}
   #radarSelf{position:absolute; top:50%; left:50%; width:5px; height:5px; background:var(--cyan); border-radius:50%; transform:translate(-50%,-50%);}
 
-  #secondaryControls{position:absolute; bottom:112px; left:0; right:0; display:flex; justify-content:center; gap:14px; pointer-events:auto;}
+  #secondaryControls{position:absolute; top:195px; right:16px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; pointer-events:auto;}
+  #secondaryControls .smallBtn{width:auto; height:auto; border-radius:4px; padding:6px 10px; font-size:8px;}
   .smallBtn.riskBtn{border-color:var(--danger); color:var(--danger); background:rgba(232,17,45,0.08);}
   .smallBtn.riskBtn:disabled{opacity:0.4;}
   #riskNum.on{color:var(--danger);}
@@ -196,7 +197,7 @@
     color:var(--text-dim); font-family:'Orbitron',sans-serif; font-weight:700; font-size:8px; cursor:pointer; letter-spacing:0.5px;}
   .smallBtn:active{transform:scale(0.92);}
 
-  #controls{position:absolute; bottom:22px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:26px; pointer-events:auto;}
+  #controls{position:absolute; bottom:18px; right:16px; display:flex; align-items:center; gap:18px; pointer-events:auto;}
   #fireBtn{width:82px; height:82px; border-radius:50%; border:3px solid var(--danger); background:rgba(232,17,45,0.12);
     color:var(--danger); font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; letter-spacing:1px; cursor:pointer;}
   #fireBtn:active{background:rgba(232,17,45,0.35); transform:scale(0.94);}

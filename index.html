@@ -575,7 +575,7 @@
   <button class="btn" id="restartBtn">REINICIAR PROTOCOLO</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 // ===== WEAPON 3D VIEWMODEL =====
 // Low-poly first-person weapon model rendered with Three.js over the camera feed.
@@ -712,10 +712,11 @@ const Weapon3D = (function(){
     });
   }
 
-  const casingGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.08, 6);
+  let casingGeo = null;
   function spawnCasing(){
     const g = groups[activeKey];
-    if(!g) return;
+    if(!g || !window.THREE) return;
+    if(!casingGeo) casingGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.08, 6);
     const mat = new THREE.MeshStandardMaterial({ color:0xd4af37, metalness:0.8, roughness:0.3, transparent:true, opacity:1 });
     const mesh = new THREE.Mesh(casingGeo, mat);
     mesh.position.set(-0.05, 0.05, 0.16);

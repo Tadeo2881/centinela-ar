@@ -23,12 +23,22 @@
     --cyan:#ff7a1a; --cyan-dim:#b8500f; --amber:#c4d600; --danger:#e8112d;
     --purple:#b83280; --blue:#2f9bff; --gold:#ffca3a; --text:#f3ece2; --text-dim:#a68b76;
   }
+  /* Modo daltónico: aleja el ámbar/oro del rojo (confusión típica en daltonismo rojo-verde)
+     y separa el morado del azul, en vez de solo reciclar los mismos tonos. */
+  body.colorblind{
+    --amber:#ffe066; --gold:#ff9d00; --danger:#ff1f5a; --purple:#7b2cbf; --blue:#00b4d8;
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none;}
   html,body{margin:0;padding:0;height:100%;background:var(--bg);overflow:hidden;
     font-family:'Share Tech Mono', monospace; color:var(--text);}
   .display{font-family:'Orbitron', sans-serif;}
 
   #stage{position:fixed; inset:0; overflow:hidden;}
+  #stage.shake{animation:screenShake 0.32s ease;}
+  @keyframes screenShake{
+    0%{transform:translate(0,0);} 15%{transform:translate(-6px,3px);} 30%{transform:translate(5px,-4px);}
+    45%{transform:translate(-4px,-2px);} 60%{transform:translate(3px,3px);} 75%{transform:translate(-2px,1px);}
+    100%{transform:translate(0,0);}}
   #cam{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter: contrast(1.05) saturate(0.85); transition:filter .4s ease;}
   #stage.night #cam{filter:contrast(1.3) saturate(1.25) brightness(1.12) sepia(0.55) hue-rotate(-12deg);}
   #camFallback{position:absolute; inset:0; background: radial-gradient(circle at 50% 30%, #170d07 0%, #0a0503 70%);}
@@ -128,9 +138,28 @@
   .legendSwatch{width:20px; height:20px; border:2px solid var(--amber); flex-shrink:0;}
   .legendSwatch.type-runner{border-color:var(--blue);}
   .legendSwatch.type-sniper{border-color:var(--purple); border-style:dashed;}
+  .legendSwatch.type-armored{border-color:var(--text); border-width:3px;}
   .legendSwatch.type-boss{border-color:var(--danger); width:24px; height:24px;}
+  .legendSwatch.type-boss2{border-color:var(--gold); width:22px; height:22px; border-style:dotted;}
   .legendSwatch.pickup{transform:rotate(45deg); border-color:var(--cyan);}
   #closeTutorialBtn{margin-top:6px; margin-bottom:20px;}
+
+  /* ===== SETTINGS ===== */
+  #settingsScreen{position:fixed; inset:0; z-index:57; background:rgba(6,3,2,0.97); display:none; flex-direction:column;
+    align-items:center; padding:28px 20px; overflow-y:auto;}
+  #settingsScreen.show{display:flex;}
+  #settingsScreen h2{font-family:'Orbitron',sans-serif; letter-spacing:3px; color:var(--cyan); font-size:20px; margin:0 0 18px;}
+  .rangeInput{width:100%; max-width:400px; accent-color:var(--cyan); margin:6px 0;}
+  .toggleRow{display:flex; justify-content:space-between; align-items:center; max-width:440px;}
+  .toggleBtn{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:1px; padding:8px 14px;
+    border:1px solid var(--cyan); color:var(--cyan); background:rgba(255,122,26,0.08); cursor:pointer; border-radius:2px;}
+  .toggleBtn.off{border-color:var(--text-dim); color:var(--text-dim); background:transparent;}
+  #skinPicker{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;}
+  .skinDot{width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,0.2); cursor:pointer; position:relative;}
+  .skinDot.selected{border-color:var(--text); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--cyan);}
+  .skinDot.locked{opacity:0.25; cursor:not-allowed;}
+  .skinDot .lockMark{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--text);}
+  #closeSettingsBtn{margin-top:6px; margin-bottom:20px;}
 
   .brackets{position:relative; padding:18px 26px;}
   .brackets::before{content:'';position:absolute;top:0;left:0;width:22px;height:22px;border:2px solid var(--cyan);border-right:none;border-bottom:none;}
@@ -195,7 +224,9 @@
   .marker .hpbar i{display:block; height:100%; background:var(--amber);}
   .marker.type-runner .box{border-color:var(--blue);} .marker.type-runner .tag{color:var(--blue);} .marker.type-runner .hpbar i{background:var(--blue);}
   .marker.type-sniper .box{border-color:var(--purple); border-style:dashed;} .marker.type-sniper .tag{color:var(--purple);} .marker.type-sniper .hpbar i{background:var(--purple);}
+  .marker.type-armored .box{border-color:var(--text); border-width:3px;} .marker.type-armored .tag{color:var(--text);} .marker.type-armored .hpbar i{background:var(--text);}
   .marker.type-boss .box{border-color:var(--danger); width:72px; height:72px; border-width:3px;} .marker.type-boss .tag{color:var(--danger); font-size:10px; font-weight:700;} .marker.type-boss .hpbar i{background:var(--danger);}
+  .marker.type-boss2 .box{border-color:var(--gold); width:60px; height:60px; border-width:3px; border-style:dotted;} .marker.type-boss2 .tag{color:var(--gold); font-size:10px; font-weight:700;} .marker.type-boss2 .hpbar i{background:var(--gold);}
   .marker.elite .box{box-shadow:0 0 14px 2px rgba(255,202,58,0.7); border-color:var(--gold);} .marker.elite .tag{color:var(--gold);}
   .marker.inreticle .box{border-color:var(--danger) !important; box-shadow:0 0 14px rgba(232,17,45,0.7) !important;}
   .marker.inreticle .tag{color:var(--danger) !important;}
@@ -350,7 +381,9 @@
     <div class="tutRow"><div class="legendSwatch type-scout"></div><p>EXPLORADOR — lento, el más común.</p></div>
     <div class="tutRow"><div class="legendSwatch type-runner"></div><p>CORREDOR — rápido, te obliga a girar rápido.</p></div>
     <div class="tutRow"><div class="legendSwatch type-sniper"></div><p>FRANCOTIRADOR — se queda lejos y dispara a distancia si no lo neutralizas a tiempo.</p></div>
+    <div class="tutRow"><div class="legendSwatch type-armored"></div><p>BLINDADO — resiste la mitad del daño del rifle; el francotirador lo perfora sin resistencia.</p></div>
     <div class="tutRow"><div class="legendSwatch type-boss"></div><p>JEFE — aparece cada 5 olas, mucha vida y daño de área.</p></div>
+    <div class="tutRow"><div class="legendSwatch type-boss2"></div><p>ENJAMBRE — jefe alterno cada 10 olas, más rápido y con movimiento errático.</p></div>
     <div class="tutRow"><div class="legendSwatch pickup"></div><p>POTENCIADOR — apunta brevemente para recogerlo (escudo, munición o daño x2).</p></div>
   </div>
 
@@ -372,6 +405,41 @@
   <button class="btn secondary" id="closeTutorialBtn">ENTENDIDO</button>
 </div>
 
+<!-- SETTINGS -->
+<div id="settingsScreen">
+  <h2>AJUSTES</h2>
+
+  <div class="tutSection">
+    <h3>VOLUMEN</h3>
+    <input type="range" id="volumeSlider" min="0" max="100" value="80" class="rangeInput">
+    <p id="volumeVal">80%</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>SENSIBILIDAD DE GIRO (modo simulación / sin brújula)</h3>
+    <input type="range" id="sensSlider" min="10" max="60" value="25" class="rangeInput">
+    <p id="sensVal">Media</p>
+  </div>
+
+  <div class="tutSection toggleRow">
+    <h3>VIBRACIÓN</h3>
+    <button class="toggleBtn" id="vibrationToggle">ACTIVADA</button>
+  </div>
+
+  <div class="tutSection toggleRow">
+    <h3>MODO DALTÓNICO</h3>
+    <button class="toggleBtn" id="colorblindToggle">DESACTIVADO</button>
+  </div>
+
+  <div class="tutSection">
+    <h3>SKIN DEL ARMA</h3>
+    <p>Desbloqueas nuevos colores al subir de rango.</p>
+    <div id="skinPicker"></div>
+  </div>
+
+  <button class="btn secondary" id="closeSettingsBtn">GUARDAR Y CERRAR</button>
+</div>
+
 <!-- START SCREEN -->
 <div id="startScreen">
   <div class="brackets">
@@ -384,6 +452,7 @@
   <div class="linkRow">
     <button class="linkBtn" id="howToPlayBtn">CÓMO JUGAR</button>
     <button class="linkBtn" id="viewBriefingBtn">VER BRIEFING</button>
+    <button class="linkBtn" id="settingsBtn">AJUSTES</button>
   </div>
 
   <div id="diffWrap">
@@ -501,6 +570,7 @@
   <h2>UNIDAD CAÍDA</h2>
   <div class="stat">Bajas confirmadas: <b id="finalScore">0</b></div>
   <div class="stat">Ola alcanzada: <b id="finalWave">1</b></div>
+  <div class="rankup" id="bestScoreLine"></div>
   <div class="rankup" id="rankupLine"></div>
   <button class="btn" id="restartBtn">REINICIAR PROTOCOLO</button>
 </div>
@@ -514,6 +584,8 @@
 const Weapon3D = (function(){
   let renderer, scene, camera, container;
   let groups = {}, activeKey = 'rifle';
+  let accentMats = {}, flashes = {}, tipPos = {}, flashLife = {};
+  let casings = [];
   let kickT = 0, reloadT = 0, reloadDur = 1400;
   let ready = false;
 
@@ -531,6 +603,7 @@ const Weapon3D = (function(){
     barrel.rotation.z = Math.PI/2;
     barrel.position.set(0.75 + barrelLen/2, 0.02, 0);
     g.add(barrel);
+    const tipX = 0.75 + barrelLen;
 
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.38, 0.18), accent);
     mag.position.set(-0.12, -0.32, 0);
@@ -566,7 +639,18 @@ const Weapon3D = (function(){
       rail.position.set(0.1, 0.19, 0);
       g.add(rail);
     }
-    return g;
+
+    // muzzle flash sprite at barrel tip, hidden until fired
+    const flashMat = new THREE.MeshBasicMaterial({
+      color:0xfff3d6, transparent:true, opacity:0, depthWrite:false,
+      blending:THREE.AdditiveBlending, side:THREE.DoubleSide
+    });
+    const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), flashMat);
+    flash.position.set(tipX + 0.05, 0.02, 0);
+    flash.visible = false;
+    g.add(flash);
+
+    return { group:g, accentMat:accent, flash, tipX };
   }
 
   function resize(){
@@ -598,11 +682,15 @@ const Weapon3D = (function(){
     rim.position.set(-1.5, 0.5, 1.5);
     scene.add(rim);
 
-    groups.rifle = buildWeapon(0xff7a1a, false);
-    groups.sniper = buildWeapon(0xb83280, true);
+    const built = { rifle: buildWeapon(0xff7a1a, false), sniper: buildWeapon(0xb83280, true) };
+    Object.keys(built).forEach(key=>{
+      groups[key] = built[key].group;
+      accentMats[key] = built[key].accentMat;
+      flashes[key] = built[key].flash;
+      tipPos[key] = built[key].tipX;
+      scene.add(groups[key]);
+    });
     groups.sniper.visible = false;
-    scene.add(groups.rifle);
-    scene.add(groups.sniper);
 
     resize();
     window.addEventListener('resize', resize);
@@ -617,7 +705,36 @@ const Weapon3D = (function(){
     groups[activeKey].visible = true;
   }
 
-  function kick(){ kickT = 1; }
+  function setSkin(colorHex){
+    Object.keys(accentMats).forEach(key=>{
+      accentMats[key].color.setHex(colorHex);
+      accentMats[key].emissive.setHex(colorHex);
+    });
+  }
+
+  const casingGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.08, 6);
+  function spawnCasing(){
+    const g = groups[activeKey];
+    if(!g) return;
+    const mat = new THREE.MeshStandardMaterial({ color:0xd4af37, metalness:0.8, roughness:0.3, transparent:true, opacity:1 });
+    const mesh = new THREE.Mesh(casingGeo, mat);
+    mesh.position.set(-0.05, 0.05, 0.16);
+    mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+    g.add(mesh);
+    casings.push({
+      mesh, group:g, life:0.7,
+      vel:{ x:0.15+Math.random()*0.1, y:0.35+Math.random()*0.15, z:0.05 },
+      angVel:{ x:(Math.random()-0.5)*8, y:(Math.random()-0.5)*8, z:(Math.random()-0.5)*8 }
+    });
+    if(casings.length > 12){ const old = casings.shift(); old.group.remove(old.mesh); old.mesh.material.dispose(); }
+  }
+
+  function kick(){
+    kickT = 1;
+    spawnCasing();
+    const f = flashes[activeKey];
+    if(f){ f.visible = true; f.material.opacity = 1; flashLife[activeKey] = 0.07; }
+  }
   function reloadAnim(durationMs){ reloadT = 1; reloadDur = Math.max(200, durationMs||1400); }
 
   let lastT = performance.now();
@@ -650,10 +767,34 @@ const Weapon3D = (function(){
       g.position.set(0, bobY + reloadY, kickOffset);
       g.rotation.set(kickRotX, 0, bobRotZ + reloadRotZ);
     }
+
+    // muzzle flash decay
+    Object.keys(flashes).forEach(key=>{
+      if(flashLife[key] > 0){
+        flashLife[key] = Math.max(0, flashLife[key] - dt);
+        flashes[key].material.opacity = flashLife[key] / 0.07;
+        if(flashLife[key] <= 0) flashes[key].visible = false;
+      }
+    });
+
+    // shell casing physics (simple gravity fall + fade)
+    for(let i = casings.length-1; i >= 0; i--){
+      const c = casings[i];
+      c.vel.y -= 1.6*dt;
+      c.mesh.position.x += c.vel.x*dt;
+      c.mesh.position.y += c.vel.y*dt;
+      c.mesh.position.z += c.vel.z*dt;
+      c.mesh.rotation.x += c.angVel.x*dt;
+      c.mesh.rotation.y += c.angVel.y*dt;
+      c.life -= dt;
+      c.mesh.material.opacity = Math.max(0, c.life/0.7);
+      if(c.life <= 0){ c.group.remove(c.mesh); c.mesh.material.dispose(); casings.splice(i,1); }
+    }
+
     renderer.render(scene, camera);
   }
 
-  return { init, setWeapon, kick, reloadAnim };
+  return { init, setWeapon, kick, reloadAnim, setSkin };
 })();
 </script>
 <script>
@@ -695,7 +836,8 @@ const Weapon3D = (function(){
   const ENEMY_NEARBY_RANGE = 150;
   const ALLY_WARN_COOLDOWN = 20000;
 
-  let profile = { totalKills:0, bestWave:1, eliteKills:0, pickupsCollected:0, rewardTokens:0, briefingSeen:false, missions:{date:'',list:[]}, achievements:{} };
+  let profile = { totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' }, missions:{date:'',list:[]}, achievements:{} };
+  let settings = profile.settings;
 
   const FOV = 66;
   const MAX_RADAR_RANGE = 120;
@@ -706,10 +848,12 @@ const Weapon3D = (function(){
   }
 
   const ENEMY_TYPES = {
-    scout:  { hp:18, speed:0.35, points:1, label:'EXPLORADOR' },
-    runner: { hp:14, speed:1.5,  points:2, label:'CORREDOR' },
-    sniper: { hp:22, speed:0.05, points:3, label:'FRANCOTIRADOR', snipeInterval:6000, snipeDamage:20 },
-    boss:   { hp:140,speed:0.5,  points:15,label:'JEFE' }
+    scout:   { hp:18, speed:0.35, points:1, label:'EXPLORADOR' },
+    runner:  { hp:14, speed:1.5,  points:2, label:'CORREDOR' },
+    sniper:  { hp:22, speed:0.05, points:3, label:'FRANCOTIRADOR', snipeInterval:6000, snipeDamage:20 },
+    armored: { hp:40, speed:0.25, points:4, label:'BLINDADO', resist:{ rifle:0.5, sniper:1 } },
+    boss:    { hp:140, speed:0.5, points:15, label:'JEFE' },
+    boss2:   { hp:95,  speed:1.1, points:22, label:'ENJAMBRE', erratic:true }
   };
   // Dificultad dinámica: el nivel elegido es solo el punto de partida.
   // A medida que avanzan las olas, los multiplicadores suben — incluso jugando en
@@ -791,6 +935,16 @@ const Weapon3D = (function(){
   const tutorialScreen = document.getElementById('tutorialScreen');
   const howToPlayBtn = document.getElementById('howToPlayBtn');
   const closeTutorialBtn = document.getElementById('closeTutorialBtn');
+  const settingsScreen = document.getElementById('settingsScreen');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+  const volumeSlider = document.getElementById('volumeSlider');
+  const volumeVal = document.getElementById('volumeVal');
+  const sensSlider = document.getElementById('sensSlider');
+  const sensVal = document.getElementById('sensVal');
+  const vibrationToggle = document.getElementById('vibrationToggle');
+  const colorblindToggle = document.getElementById('colorblindToggle');
+  const skinPicker = document.getElementById('skinPicker');
   const statusLines = document.getElementById('statusLines');
   const startBtn = document.getElementById('startBtn');
   const demoBtn = document.getElementById('demoBtn');
@@ -829,6 +983,7 @@ const Weapon3D = (function(){
   const finalScore = document.getElementById('finalScore');
   const finalWave = document.getElementById('finalWave');
   const rankupLine = document.getElementById('rankupLine');
+  const bestScoreLine = document.getElementById('bestScoreLine');
   const restartBtn = document.getElementById('restartBtn');
   const callsignInput = document.getElementById('callsignInput');
   const lbList = document.getElementById('lbList');
@@ -890,6 +1045,39 @@ const Weapon3D = (function(){
   howToPlayBtn.addEventListener('click', ()=> tutorialScreen.classList.add('show'));
   closeTutorialBtn.addEventListener('click', ()=> tutorialScreen.classList.remove('show'));
 
+  function applySettingsToUI(){
+    volumeSlider.value = Math.round((settings.volume!=null?settings.volume:0.8) * 100);
+    volumeVal.textContent = volumeSlider.value + '%';
+    sensSlider.value = Math.round((settings.sensitivity!=null?settings.sensitivity:0.25) * 100);
+    sensVal.textContent = settings.sensitivity < 0.18 ? 'Baja' : (settings.sensitivity > 0.35 ? 'Alta' : 'Media');
+    vibrationToggle.textContent = settings.vibration ? 'ACTIVADA' : 'DESACTIVADA';
+    vibrationToggle.classList.toggle('off', !settings.vibration);
+    colorblindToggle.textContent = settings.colorblind ? 'ACTIVADO' : 'DESACTIVADO';
+    colorblindToggle.classList.toggle('off', !settings.colorblind);
+  }
+  function applyColorblind(){ document.body.classList.toggle('colorblind', !!settings.colorblind); }
+
+  settingsBtn.addEventListener('click', ()=> settingsScreen.classList.add('show'));
+  closeSettingsBtn.addEventListener('click', ()=>{ settingsScreen.classList.remove('show'); saveProfile(); });
+
+  volumeSlider.addEventListener('input', ()=>{
+    settings.volume = volumeSlider.value/100;
+    volumeVal.textContent = volumeSlider.value + '%';
+  });
+  sensSlider.addEventListener('input', ()=>{
+    settings.sensitivity = sensSlider.value/100;
+    sensVal.textContent = settings.sensitivity < 0.18 ? 'Baja' : (settings.sensitivity > 0.35 ? 'Alta' : 'Media');
+  });
+  vibrationToggle.addEventListener('click', ()=>{
+    settings.vibration = !settings.vibration;
+    applySettingsToUI();
+  });
+  colorblindToggle.addEventListener('click', ()=>{
+    settings.colorblind = !settings.colorblind;
+    applySettingsToUI();
+    applyColorblind();
+  });
+
   document.querySelectorAll('.diffBtn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.diffBtn').forEach(b=>b.classList.remove('active'));
@@ -911,6 +1099,39 @@ const Weapon3D = (function(){
     { min:60,  name:'VETERANO' }, { min:120, name:'ÉLITE' }, { min:250, name:'LEYENDA' }
   ];
   function rankFor(kills){ let r = RANKS[0]; for(const c of RANKS){ if(kills>=c.min) r=c; } return r.name; }
+
+  // Skins del arma 3D: se desbloquean con el mismo umbral de bajas que los rangos.
+  const SKINS = [
+    { key:'default', name:'RECLUTA',      minKills:0,   color:0xff7a1a },
+    { key:'toxic',   name:'SOLDADO',      minKills:10,  color:0xc4d600 },
+    { key:'ice',     name:'ESPECIALISTA', minKills:30,  color:0x2f9bff },
+    { key:'blood',   name:'VETERANO',     minKills:60,  color:0xe8112d },
+    { key:'royal',   name:'ÉLITE',        minKills:120, color:0xffca3a },
+    { key:'ghost',   name:'LEYENDA',      minKills:250, color:0xf3ece2 }
+  ];
+  function unlockedSkins(){ return SKINS.filter(s => profile.totalKills >= s.minKills); }
+  function renderSkinPicker(){
+    const unlocked = unlockedSkins().map(s=>s.key);
+    skinPicker.innerHTML = SKINS.map(s=>{
+      const isUnlocked = unlocked.includes(s.key);
+      const isSelected = settings.skin === s.key;
+      const hex = '#' + s.color.toString(16).padStart(6,'0');
+      return '<div class="skinDot' + (isSelected?' selected':'') + (isUnlocked?'':' locked') +
+        '" style="background:' + hex + '" data-skin="' + s.key + '" title="' + s.name + '">' +
+        (isUnlocked?'':'<span class="lockMark">🔒</span>') + '</div>';
+    }).join('');
+    skinPicker.querySelectorAll('.skinDot').forEach(dot=>{
+      dot.addEventListener('click', ()=>{
+        const key = dot.dataset.skin;
+        if(!unlocked.includes(key)) return;
+        settings.skin = key;
+        saveProfile();
+        renderSkinPicker();
+        const skinCfg = SKINS.find(s=>s.key===key);
+        if(skinCfg) Weapon3D.setSkin(skinCfg.color);
+      });
+    });
+  }
 
   function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 
@@ -955,31 +1176,51 @@ const Weapon3D = (function(){
   function checkAchievements(event, payload){
     const a = profile.achievements;
     const unlocked = [];
-    if(event==='kill' && payload.type==='boss' && !a.bossHunter){ a.bossHunter=true; unlocked.push('CAZADOR DE JEFES'); }
+    if(event==='kill' && BOSS_TYPES.includes(payload.type) && !a.bossHunter){ a.bossHunter=true; unlocked.push('CAZADOR DE JEFES'); }
     if(event==='combo' && payload>=10 && !a.streak10){ a.streak10=true; unlocked.push('RACHA IMPARABLE'); }
     if(event==='wave' && payload>=10 && !a.wave10){ a.wave10=true; unlocked.push('SUPERVIVIENTE'); }
+    if(event==='wave' && payload>=20 && !a.marathoner){ a.marathoner=true; unlocked.push('MARATONISTA'); }
     if(event==='kill' && payload.elite){
       profile.eliteKills = (profile.eliteKills||0)+1;
       if(profile.eliteKills>=5 && !a.eliteHunter){ a.eliteHunter=true; unlocked.push('CAZADOR DE ÉLITES'); }
+    }
+    if(event==='kill' && payload.weapon==='sniper'){
+      profile.sniperKills = (profile.sniperKills||0)+1;
+      if(profile.sniperKills>=50 && !a.sharpshooter){ a.sharpshooter=true; unlocked.push('TIRADOR DE PRECISIÓN'); }
+    }
+    if(event==='kill'){
+      if(profile.totalKills>=100 && !a.centurion){ a.centurion=true; unlocked.push('CENTURIÓN'); }
     }
     if(event==='pickup'){
       profile.pickupsCollected = (profile.pickupsCollected||0)+1;
       if(profile.pickupsCollected>=10 && !a.scavenger){ a.scavenger=true; unlocked.push('RECOLECTOR'); }
     }
+    if(event==='night' && !a.nightOwl){ a.nightOwl=true; unlocked.push('OJOS EN LA OSCURIDAD'); }
+    if(event==='tokens' && profile.tokensSpent>=10 && !a.generous){ a.generous=true; unlocked.push('ESTRATEGA GENEROSO'); }
     if(unlocked.length){ unlocked.forEach(name=>killMsg('LOGRO: ' + name, 'gold')); saveProfile(); }
   }
+
+  const ACHIEVEMENT_TOTAL = 9;
 
   async function loadProfile(){
     try{
       const res = await window.storage.get(PROFILE_KEY, false);
-      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, eliteKills:0, pickupsCollected:0, rewardTokens:0, briefingSeen:false, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
+      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' }, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
     }catch(e){ /* first time playing */ }
+    if(!profile.settings) profile.settings = { volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' };
+    settings = profile.settings;
+    applySettingsToUI();
+    applyColorblind();
     ensureDailyMissions();
     renderMissions();
     selectedRewards = { points:0, ammo:0, shield:0, damage:0 };
     renderRewardsPanel();
+    renderSkinPicker();
+    const savedSkin = SKINS.find(s => s.key === settings.skin) || SKINS[0];
+    Weapon3D.setSkin(savedSkin.color);
     const achCount = Object.keys(profile.achievements||{}).length;
-    rankLine.innerHTML = rankFor(profile.totalKills) + ' <span>· ' + profile.totalKills + ' BAJAS · OLA MÁX ' + profile.bestWave + ' · LOGROS ' + achCount + '/5</span>';
+    rankLine.innerHTML = rankFor(profile.totalKills) + ' <span>· ' + profile.totalKills + ' BAJAS · OLA MÁX ' + profile.bestWave +
+      ' · RÉCORD ' + (profile.bestScore||0) + ' · LOGROS ' + achCount + '/' + ACHIEVEMENT_TOTAL + '</span>';
   }
   function saveProfile(){ try{ window.storage.set(PROFILE_KEY, JSON.stringify(profile), false); }catch(e){} }
 
@@ -991,7 +1232,8 @@ const Weapon3D = (function(){
   }
   function beep(freq, dur, type, vol, pan){
     if(!audioCtx) return;
-    type = type||'sine'; vol = vol==null?0.18:vol; pan = pan||0;
+    type = type||'sine'; vol = (vol==null?0.18:vol) * (settings ? settings.volume : 0.8); pan = pan||0;
+    if(vol <= 0) return;
     const t0 = audioCtx.currentTime;
     const osc = audioCtx.createOscillator(); osc.type = type; osc.frequency.setValueAtTime(freq, t0);
     const gain = audioCtx.createGain(); gain.gain.setValueAtTime(vol, t0); gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
@@ -1004,7 +1246,8 @@ const Weapon3D = (function(){
   }
   function noiseBurst(dur, vol){
     if(!audioCtx) return;
-    dur = dur||0.06; vol = vol==null?0.22:vol;
+    dur = dur||0.06; vol = (vol==null?0.22:vol) * (settings ? settings.volume : 0.8);
+    if(vol <= 0) return;
     const size = Math.max(1, Math.floor(audioCtx.sampleRate*dur));
     const buffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -1027,7 +1270,38 @@ const Weapon3D = (function(){
   function sfxPickup(){ beep(660,0.06,'triangle',0.16); setTimeout(()=>beep(990,0.07,'triangle',0.15),60); }
   function sfxSwitch(){ beep(400,0.05,'square',0.1); }
 
-  function vibrate(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
+  // ---------- AMBIENT DRONE ----------
+  let ambientNodes = null;
+  function startAmbient(){
+    if(!audioCtx || ambientNodes) return;
+    const vol = (settings ? settings.volume : 0.8) * 0.05;
+    if(vol <= 0) return;
+    const osc1 = audioCtx.createOscillator(); osc1.type = 'sine'; osc1.frequency.value = 54;
+    const osc2 = audioCtx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 58;
+    const masterGain = audioCtx.createGain(); masterGain.gain.value = vol;
+    const lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.12;
+    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = vol*0.5;
+    lfo.connect(lfoGain); lfoGain.connect(masterGain.gain);
+    osc1.connect(masterGain); osc2.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+    osc1.start(); osc2.start(); lfo.start();
+    ambientNodes = { osc1, osc2, lfo, masterGain };
+  }
+  function stopAmbient(){
+    if(!ambientNodes) return;
+    try{
+      const t0 = audioCtx.currentTime;
+      ambientNodes.masterGain.gain.exponentialRampToValueAtTime(0.001, t0+0.4);
+      setTimeout(()=>{ try{ ambientNodes.osc1.stop(); ambientNodes.osc2.stop(); ambientNodes.lfo.stop(); }catch(e){} }, 450);
+    }catch(e){}
+    ambientNodes = null;
+  }
+
+  function vibrate(pattern){ try{ if(navigator.vibrate && (!settings || settings.vibration)) navigator.vibrate(pattern); }catch(e){} }
+  function screenShake(){
+    const el = document.getElementById('stage');
+    el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+  }
 
   // ---------- HEARTBEAT ----------
   let heartbeatActive = false;
@@ -1117,22 +1391,25 @@ const Weapon3D = (function(){
   // ---------- ENEMY MANAGEMENT ----------
   function pickType(){
     const r = Math.random();
-    if(r < 0.45) return 'scout';
-    if(r < 0.80) return 'runner';
-    return 'sniper';
+    if(r < 0.38) return 'scout';
+    if(r < 0.68) return 'runner';
+    if(r < 0.85) return 'sniper';
+    return 'armored';
   }
+  const BOSS_TYPES = ['boss', 'boss2'];
 
   function spawnEnemy(forceType){
     const type = forceType || pickType();
+    const isBoss = type === 'boss' || type === 'boss2';
     const cfg = ENEMY_TYPES[type];
-    const d = type === 'boss' ? (60 + Math.random()*40) : (25 + Math.random()*90);
+    const d = isBoss ? (60 + Math.random()*40) : (25 + Math.random()*90);
     const b = Math.random()*360;
     let base = simMode ? { lat: 19.4326, lon: -99.1332 } : playerPos;
     if(!base) return;
     const p = destPoint(base.lat, base.lon, b, d);
-    const isElite = (type !== 'boss') && Math.random() < 0.12;
+    const isElite = (!isBoss) && Math.random() < 0.12;
     const diffCfg = combinedMult();
-    const hp = Math.round(cfg.hp * (1 + wave*0.1) * (isElite ? 2.4 : 1) * (type==='boss' ? (1+wave*0.06) : 1) * diffCfg.hp);
+    const hp = Math.round(cfg.hp * (1 + wave*0.1) * (isElite ? 2.4 : 1) * (isBoss ? (1+wave*0.06) : 1) * diffCfg.hp);
     const now = Date.now();
     enemies.push({
       id: genId(), lat: p.lat, lon: p.lon, hp, maxHp: hp, type, elite: isElite,
@@ -1142,10 +1419,10 @@ const Weapon3D = (function(){
       nextSnipeAt: type==='sniper' ? now + 4500 : null,
       simBearing: simMode ? b : null, simDist: simMode ? d : null
     });
-    if(type === 'boss'){
-      alertBanner.textContent = 'JEFE DETECTADO';
+    if(isBoss){
+      alertBanner.textContent = type === 'boss2' ? 'ENJAMBRE DETECTADO' : 'JEFE DETECTADO';
       alertBanner.classList.remove('show'); void alertBanner.offsetWidth; alertBanner.classList.add('show');
-      vibrate([120,60,120,60,240]); sfxBoss();
+      vibrate([120,60,120,60,240]); sfxBoss(); screenShake();
     }
   }
 
@@ -1156,8 +1433,11 @@ const Weapon3D = (function(){
   }
 
   function ensureEnemyCount(){
-    const bossAlive = enemies.some(e=>e.type==='boss');
-    if(wave % 5 === 0 && wave !== bossSpawnedForWave && !bossAlive){ bossSpawnedForWave = wave; spawnEnemy('boss'); }
+    const bossAlive = enemies.some(e=> BOSS_TYPES.includes(e.type));
+    if(wave % 5 === 0 && wave !== bossSpawnedForWave && !bossAlive){
+      bossSpawnedForWave = wave;
+      spawnEnemy(wave % 10 === 0 ? 'boss2' : 'boss');
+    }
     const target = bossAlive ? 1 : Math.min(3 + Math.floor(wave/2), 6);
     let guard = 0;
     while(nearbyEnemyCount() < target && guard < 12){ spawnEnemy(); guard++; }
@@ -1204,11 +1484,12 @@ const Weapon3D = (function(){
     enemies.forEach(en=>{
       if(en.expiresAt && now > en.expiresAt){ killMsg((en.elite?'ÉLITE ':'') + 'OBJETIVO ESCAPÓ', 'gold'); return; }
       if(en.type !== 'sniper' && en.speed > 0){
+        const jitter = ENEMY_TYPES[en.type] && ENEMY_TYPES[en.type].erratic ? (Math.random()-0.5)*50 : 0;
         if(simMode){ en.simDist = Math.max(6, en.simDist - en.speed*dt); }
         else if(playerPos){
           const dist = distanceMeters(playerPos.lat, playerPos.lon, en.lat, en.lon);
           if(dist > 6){
-            const brg = bearingTo(en.lat, en.lon, playerPos.lat, playerPos.lon);
+            const brg = bearingTo(en.lat, en.lon, playerPos.lat, playerPos.lon) + jitter;
             const move = Math.min(en.speed*dt, dist-6);
             const np = destPoint(en.lat, en.lon, brg, move);
             en.lat = np.lat; en.lon = np.lon; en.updatedAt = now;
@@ -1271,7 +1552,7 @@ const Weapon3D = (function(){
     if(!running || dragStartX===null) return;
     if(headingAvailable && !simMode) return;
     const dx = e.touches[0].clientX - dragStartX;
-    heading = (dragStartHeading - dx*0.25 + 360) % 360;
+    heading = (dragStartHeading - dx*(settings.sensitivity||0.25) + 360) % 360;
   }, {passive:true});
   document.getElementById('stage').addEventListener('touchend', ()=>{ dragStartX=null; });
 
@@ -1328,7 +1609,7 @@ const Weapon3D = (function(){
       if(p.dist <= MAX_RADAR_RANGE){
         const relAngle = toRad(angleDiff(p.bearing, heading));
         const r = (p.dist/MAX_RADAR_RANGE) * 40;
-        dots.push({x:44+Math.sin(relAngle)*r, y:44-Math.cos(relAngle)*r, close: p.dist<20, boss: en.type==='boss'});
+        dots.push({x:44+Math.sin(relAngle)*r, y:44-Math.cos(relAngle)*r, close: p.dist<20, boss: BOSS_TYPES.includes(en.type)});
       }
       if(!p.visible && p.dist < 15){
         const last = offscreenAlerted.get(en.id) || 0;
@@ -1389,7 +1670,7 @@ const Weapon3D = (function(){
       else if(playerPos){ dist = distanceMeters(playerPos.lat, playerPos.lon, en.lat, en.lon); }
       else return;
       if(dist < 18){
-        dmgPerSec += (en.type==='boss' ? 20 : 6);
+        dmgPerSec += (BOSS_TYPES.includes(en.type) ? 20 : 6);
         if(dist < closestDist){ closestDist = dist; closestAttacker = en; }
       }
     });
@@ -1561,7 +1842,8 @@ const Weapon3D = (function(){
     if(target){
       const en = enemies.find(e=>e.id === target.id);
       if(en){
-        const dmg = w.damage * (Date.now() < damageBoostUntil ? 2 : 1);
+        const resist = ENEMY_TYPES[en.type].resist ? (ENEMY_TYPES[en.type].resist[currentWeapon] || 1) : 1;
+        const dmg = w.damage * (Date.now() < damageBoostUntil ? 2 : 1) * resist;
         en.hp -= dmg; en.updatedAt = Date.now();
         if(en.hp <= 0){
           enemies = enemies.filter(e=>e.id !== en.id);
@@ -1577,11 +1859,11 @@ const Weapon3D = (function(){
           profile.totalKills++; profile.bestWave = Math.max(profile.bestWave, wave); saveProfile();
           updateMissionProgress('kill', en.type, 1);
           updateMissionProgress('combo', combo);
-          checkAchievements('kill', { type: en.type, elite: en.elite });
+          checkAchievements('kill', { type: en.type, elite: en.elite, weapon: currentWeapon });
           checkAchievements('combo', combo);
 
           sfxKill(); vibrate([25,20,25]);
-          if(en.type==='boss'){ killMsg('JEFE ELIMINADO · +' + gained, 'gold'); }
+          if(BOSS_TYPES.includes(en.type)){ killMsg((en.type==='boss2'?'ENJAMBRE ELIMINADO':'JEFE ELIMINADO') + ' · +' + gained, 'gold'); }
           else if(combo >= 3){ killMsg('RACHA x' + combo + ' · +' + gained, 'gold'); }
           else { killMsg((en.elite?'ÉLITE NEUTRALIZADA':'OBJETIVO NEUTRALIZADO') + ' · +' + gained, en.elite?'gold':null); }
 
@@ -1635,11 +1917,16 @@ const Weapon3D = (function(){
     const priorRank = rankFor(profile.totalKills);
     finalScore.textContent = score;
     finalWave.textContent = wave;
+    const isNewBest = score > (profile.bestScore||0);
+    if(isNewBest) profile.bestScore = score;
     hud.classList.remove('active');
     gameOver.classList.add('active');
     const newRank = rankFor(profile.totalKills);
     rankupLine.textContent = newRank !== priorRank ? ('NUEVO RANGO: ' + newRank) : ('RANGO ACTUAL: ' + newRank);
+    bestScoreLine.textContent = isNewBest ? ('¡NUEVO RÉCORD! · ' + profile.bestScore) : ('RÉCORD PERSONAL: ' + (profile.bestScore||0));
+    saveProfile();
     syncLeaderboard();
+    stopAmbient();
     [syncTimer, enemySyncTimer, pingTimer, pickupTimer, timeFilterTimer].forEach(t=>{ if(t) clearInterval(t); });
     syncTimer = enemySyncTimer = pingTimer = pickupTimer = timeFilterTimer = null;
     dangerPulse.classList.remove('active'); heartbeatActive = false;
@@ -1659,7 +1946,9 @@ const Weapon3D = (function(){
     const used = Object.values(selectedRewards).reduce((a,b)=>a+b,0);
     if(used <= 0) return;
     profile.rewardTokens = Math.max(0, (profile.rewardTokens||0) - used);
+    profile.tokensSpent = (profile.tokensSpent||0) + used;
     saveProfile();
+    checkAchievements('tokens', used);
 
     if(selectedRewards.points > 0){
       const bonus = selectedRewards.points * 50;
@@ -1691,6 +1980,8 @@ const Weapon3D = (function(){
     resetState();
     applySelectedRewards();
     applyTimeFilter();
+    if(document.getElementById('stage').classList.contains('night')) checkAchievements('night', true);
+    startAmbient();
     if(!simMode) await syncEnemies();
     ensureEnemyCount();
     running = true;

@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>CENTINELA // Protocolo de Realidad Táctica</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0c0806">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Centinela">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -59,13 +69,19 @@
   .diffBtn.active{border-color:var(--amber); color:var(--amber); background:rgba(196,214,0,0.1);}
 
   #missionsPanel{max-width:320px; width:100%; border:1px solid var(--panel-edge); background:var(--panel); padding:10px; text-align:left;}
-  #missionsPanel .mHead{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--cyan); margin-bottom:6px;}
+  #missionsPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--cyan); cursor:pointer; list-style:none;}
+  #missionsPanel summary::-webkit-details-marker{display:none;}
+  #missionsPanel summary::after{content:'▾'; float:right; transition:transform .2s;}
+  #missionsPanel[open] summary::after{transform:rotate(180deg);}
+  #missionsPanel #missionsList{margin-top:8px;}
   .missionRow{display:flex; justify-content:space-between; font-size:10px; color:var(--text-dim); padding:3px 0; letter-spacing:0.5px;}
   .missionRow.done{color:var(--gold);}
 
   #rewardsPanel{max-width:320px; width:100%; border:1px solid var(--gold); background:rgba(255,202,58,0.06); padding:10px; text-align:left; display:none;}
   #rewardsPanel.show{display:block;}
-  #rewardsPanel .mHead{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--gold); margin-bottom:2px; display:flex; justify-content:space-between;}
+  #rewardsPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--gold); cursor:pointer; list-style:none; display:flex; justify-content:space-between;}
+  #rewardsPanel summary::-webkit-details-marker{display:none;}
+  #rewardsPanel .rBody{margin-top:8px;}
   #rewardsPanel .rHint{font-size:9px; color:var(--text-dim); margin-bottom:8px; line-height:1.5;}
   .rewardBtn{width:100%; display:flex; justify-content:space-between; align-items:center; text-align:left;
     background:transparent; border:1px solid var(--gold); color:var(--gold); font-family:'Share Tech Mono',monospace;
@@ -73,6 +89,48 @@
   .rewardBtn .badge{font-family:'Orbitron',sans-serif; font-weight:700; min-width:18px; text-align:center;}
   .rewardBtn:disabled{opacity:0.35;}
   #clearRewardsBtn{font-size:9px; letter-spacing:1px; color:var(--text-dim); background:transparent; border:none; cursor:pointer; text-decoration:underline;}
+
+  .linkRow{display:flex; gap:18px;}
+  .linkBtn{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:1.5px; color:var(--cyan);
+    background:transparent; border:none; cursor:pointer; text-decoration:underline; text-underline-offset:3px; padding:4px;}
+
+  /* ===== BRIEFING (intro narrativo) ===== */
+  #briefingScreen{position:fixed; inset:0; z-index:55; background:radial-gradient(ellipse at 50% 15%, #1a0f08 0%, #0a0503 78%);
+    display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:14px; padding:32px 24px 24px;
+    text-align:center; overflow-y:auto;}
+  #briefingScreen.show{display:flex;}
+  #briefingScreen .eyebrow{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:4px; color:var(--danger);}
+  #briefRing{width:min(70vw,260px); height:min(70vw,260px); margin:4px auto;}
+  #briefingScreen h2{font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(20px,6vw,28px); letter-spacing:2px;
+    color:var(--cyan); margin:0;}
+  #briefingScreen .briefText{max-width:420px; color:var(--text); font-size:13px; line-height:1.75; text-align:left;}
+  #briefingScreen .briefDirective{max-width:420px; border-left:2px solid var(--danger); background:rgba(232,17,45,0.08);
+    color:var(--amber); font-size:12px; line-height:1.6; text-align:left; padding:10px 14px; letter-spacing:0.3px;}
+  #briefingScreen .briefActions{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:6px; padding-bottom:20px;}
+
+  .breachRing{fill:none; stroke:var(--cyan);}
+  .breachRingBroken{fill:none; stroke:var(--danger); stroke-dasharray:46 14 30 18 70 10 24 20; animation:breachSpin 40s linear infinite;}
+  .breachTick{stroke:var(--cyan); stroke-width:2; opacity:0.8;}
+  .breachLabel{fill:var(--text-dim); font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px;}
+  .breachCenter{fill:var(--danger); animation:breachPulse 1.6s ease-in-out infinite;}
+  @keyframes breachSpin{to{transform:rotate(360deg); transform-origin:150px 150px;}}
+  @keyframes breachPulse{0%,100%{opacity:1; r:5;} 50%{opacity:0.5; r:7;}}
+
+  /* ===== TUTORIAL ("Cómo jugar") ===== */
+  #tutorialScreen{position:fixed; inset:0; z-index:56; background:rgba(6,3,2,0.97); display:none; flex-direction:column;
+    align-items:center; padding:28px 20px; overflow-y:auto;}
+  #tutorialScreen.show{display:flex;}
+  #tutorialScreen h2{font-family:'Orbitron',sans-serif; letter-spacing:3px; color:var(--cyan); font-size:20px; margin:0 0 18px;}
+  .tutSection{max-width:440px; width:100%; margin-bottom:18px; text-align:left;}
+  .tutSection h3{font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; color:var(--amber); margin:0 0 8px;}
+  .tutSection p{font-size:12px; color:var(--text-dim); line-height:1.6; margin:0 0 6px;}
+  .tutRow{display:flex; align-items:center; gap:10px; margin-bottom:7px;}
+  .legendSwatch{width:20px; height:20px; border:2px solid var(--amber); flex-shrink:0;}
+  .legendSwatch.type-runner{border-color:var(--blue);}
+  .legendSwatch.type-sniper{border-color:var(--purple); border-style:dashed;}
+  .legendSwatch.type-boss{border-color:var(--danger); width:24px; height:24px;}
+  .legendSwatch.pickup{transform:rotate(45deg); border-color:var(--cyan);}
+  #closeTutorialBtn{margin-top:6px; margin-bottom:20px;}
 
   .brackets{position:relative; padding:18px 26px;}
   .brackets::before{content:'';position:absolute;top:0;left:0;width:22px;height:22px;border:2px solid var(--cyan);border-right:none;border-bottom:none;}
@@ -159,7 +217,7 @@
   #comboRow{font-size:9px; letter-spacing:1px; color:var(--gold); font-family:'Orbitron',sans-serif; min-height:12px;}
   #boostRow{font-size:9px; letter-spacing:1px; color:var(--gold); font-family:'Orbitron',sans-serif; min-height:12px;}
 
-  #weaponView{position:absolute; left:6px; bottom:-6px; width:150px; height:120px; pointer-events:none; z-index:15;}
+  #weaponView{position:absolute; left:6px; bottom:-6px; width:150px; height:100px; pointer-events:none; z-index:15;}
   .weaponModel{position:absolute; inset:0; display:none; opacity:0.9;}
   .weaponModel.active{display:block; animation: weaponBob 2.6s ease-in-out infinite;}
   .weaponModel svg{width:100%; height:100%; overflow:visible;}
@@ -251,6 +309,80 @@
 <div id="dmgFlash"></div>
 <div id="dangerPulse"></div>
 
+<!-- BRIEFING (intro narrativo) -->
+<div id="briefingScreen">
+  <div class="eyebrow">TRANSMISIÓN ENTRANTE · SECTOR DELTA-9</div>
+
+  <svg id="briefRing" viewBox="0 0 300 300">
+    <circle class="breachRing" cx="150" cy="150" r="60" stroke-width="1.5" opacity="0.6"></circle>
+    <circle class="breachRingBroken" cx="150" cy="150" r="100" stroke-width="2.5"></circle>
+    <circle class="breachRing" cx="150" cy="150" r="135" stroke-width="1" opacity="0.35"></circle>
+    <g>
+      <line class="breachTick" x1="150" y1="6" x2="150" y2="22"></line>
+      <line class="breachTick" x1="150" y1="278" x2="150" y2="294"></line>
+      <line class="breachTick" x1="6" y1="150" x2="22" y2="150"></line>
+      <line class="breachTick" x1="278" y1="150" x2="294" y2="150"></line>
+    </g>
+    <text class="breachLabel" x="150" y="18" text-anchor="middle">N</text>
+    <text class="breachLabel" x="150" y="298" text-anchor="middle">S</text>
+    <text class="breachLabel" x="12" y="154" text-anchor="middle">O</text>
+    <text class="breachLabel" x="288" y="154" text-anchor="middle">E</text>
+    <circle class="breachCenter" cx="150" cy="150" r="5"></circle>
+  </svg>
+
+  <h2>ZONA DE CONTENCIÓN COMPROMETIDA</h2>
+  <p class="briefText">Hace seis horas, el perímetro de contención Delta-9 perdió estabilidad. Los constructos que debía vigilar comenzaron a replicarse fuera de los parámetros autorizados y a filtrarse hacia zonas habitadas. Todo equipo de reconocimiento fue evacuado antes de que se pudiera cerrar el sector.</p>
+  <p class="briefText">Los sensores detectan actividad hostil en tu posición actual — real, no simulada. El sistema Centinela que llevas puesto es la única defensa activa en tu área en este momento.</p>
+  <div class="briefDirective">DIRECTIVA: contener, no negociar. Cada constructo neutralizado retrasa la propagación. No existe un final fijo — sobrevive el mayor número de oleadas que puedas.</div>
+
+  <div class="briefActions">
+    <button class="btn" id="continueBriefingBtn">ACEPTAR MISIÓN</button>
+    <button class="linkBtn" id="skipBriefingBtn">omitir</button>
+  </div>
+</div>
+
+<!-- TUTORIAL ("Cómo jugar") -->
+<div id="tutorialScreen">
+  <h2>CÓMO JUGAR</h2>
+
+  <div class="tutSection">
+    <h3>PUNTERÍA</h3>
+    <p>Gira tu cuerpo físicamente para mover el retículo central (usa la brújula del teléfono). Sin brújula o en modo simulación, desliza el dedo sobre la pantalla para girar la vista.</p>
+    <p>Mantén el retículo sobre un objetivo hasta que se pinte de rojo — significa que está dentro de tu mira.</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>DISPARAR / RECARGAR / ARMA</h3>
+    <p>Botón DISPARAR para atacar lo que tengas en la mira. Si te quedas sin cargador, recarga sola o usa el botón RECARGAR. El botón ARMA alterna entre RIFLE (rápido, poca mira) y FRANCOTIRADOR (lento, daño alto, mira estrecha).</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>TIPOS DE HOSTILES</h3>
+    <div class="tutRow"><div class="legendSwatch type-scout"></div><p>EXPLORADOR — lento, el más común.</p></div>
+    <div class="tutRow"><div class="legendSwatch type-runner"></div><p>CORREDOR — rápido, te obliga a girar rápido.</p></div>
+    <div class="tutRow"><div class="legendSwatch type-sniper"></div><p>FRANCOTIRADOR — se queda lejos y dispara a distancia si no lo neutralizas a tiempo.</p></div>
+    <div class="tutRow"><div class="legendSwatch type-boss"></div><p>JEFE — aparece cada 5 olas, mucha vida y daño de área.</p></div>
+    <div class="tutRow"><div class="legendSwatch pickup"></div><p>POTENCIADOR — apunta brevemente para recogerlo (escudo, munición o daño x2).</p></div>
+  </div>
+
+  <div class="tutSection">
+    <h3>RIESGO VOLUNTARIO</h3>
+    <p>El botón RIESGO sube el peligro real de la partida a cambio de más puntos por baja. Es permanente durante esa partida — no se puede bajar.</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>MISIONES Y RECOMPENSAS</h3>
+    <p>Cada día tienes 3 misiones nuevas. Al completarlas ganas tokens que puedes gastar tú mismo en bonificaciones para tu próxima partida, desde la pantalla de inicio.</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>MULTIJUGADOR</h3>
+    <p>Tu puntuación y estado se comparten. Los hostiles existen en coordenadas GPS reales: cualquier operativo cerca de ti puede ver y disparar a los mismos objetivos. Usa PING para avisarles de un peligro cercano.</p>
+  </div>
+
+  <button class="btn secondary" id="closeTutorialBtn">ENTENDIDO</button>
+</div>
+
 <!-- START SCREEN -->
 <div id="startScreen">
   <div class="brackets">
@@ -259,8 +391,11 @@
   </div>
   <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.0</div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
-  <p class="desc">Fuiste asignado para contener una incursión de constructos hostiles que se filtran en tu zona. Se acercan de verdad, en coordenadas reales: gira el cuerpo para apuntar, mantén el retículo sobre el blanco y dispara antes de que te rodeen.</p>
-  <p class="mpnote">MULTIJUGADOR: tu alias, puntuación y estado se comparten. Los objetivos existen en coordenadas reales — cualquier operativo cerca de ti ve y puede disparar a los mismos hostiles, y puedes enviarles pings de alerta.</p>
+
+  <div class="linkRow">
+    <button class="linkBtn" id="howToPlayBtn">CÓMO JUGAR</button>
+    <button class="linkBtn" id="viewBriefingBtn">VER BRIEFING</button>
+  </div>
 
   <div id="diffWrap">
     <label>DIFICULTAD</label>
@@ -276,25 +411,30 @@
     <input id="callsignInput" type="text" maxlength="14" placeholder="OPERATIVO-0000">
   </div>
 
-  <div id="missionsPanel">
-    <div class="mHead">MISIONES DE HOY</div>
+  <details id="missionsPanel">
+    <summary>MISIONES DE HOY</summary>
     <div id="missionsList"></div>
-  </div>
+  </details>
 
   <div id="rewardsPanel">
-    <div class="mHead"><span>RECOMPENSAS</span><span id="tokensLeft">0 disponibles</span></div>
-    <div class="rHint">Cada misión completada te da 1 token. Elige tú qué bonificación llevar a tu próxima partida.</div>
-    <button class="rewardBtn" data-reward="points"><span>BONO DE PUNTOS +50</span><span class="badge" id="badge-points">0</span></button>
-    <button class="rewardBtn" data-reward="ammo"><span>RESERVA +50% AL INICIO</span><span class="badge" id="badge-ammo">0</span></button>
-    <button class="rewardBtn" data-reward="shield"><span>ESCUDO REFORZADO (30s)</span><span class="badge" id="badge-shield">0</span></button>
-    <button class="rewardBtn" data-reward="damage"><span>DAÑO x2 AL ARRANCAR (15s)</span><span class="badge" id="badge-damage">0</span></button>
-    <button id="clearRewardsBtn">limpiar selección</button>
+    <details open>
+      <summary><span>RECOMPENSAS</span><span id="tokensLeft">0 disponibles</span></summary>
+      <div class="rBody">
+        <div class="rHint">Cada misión completada te da 1 token. Elige tú qué bonificación llevar a tu próxima partida.</div>
+        <button class="rewardBtn" data-reward="points"><span>BONO DE PUNTOS +50</span><span class="badge" id="badge-points">0</span></button>
+        <button class="rewardBtn" data-reward="ammo"><span>RESERVA +50% AL INICIO</span><span class="badge" id="badge-ammo">0</span></button>
+        <button class="rewardBtn" data-reward="shield"><span>ESCUDO REFORZADO (30s)</span><span class="badge" id="badge-shield">0</span></button>
+        <button class="rewardBtn" data-reward="damage"><span>DAÑO x2 AL ARRANCAR (15s)</span><span class="badge" id="badge-damage">0</span></button>
+        <button id="clearRewardsBtn">limpiar selección</button>
+      </div>
+    </details>
   </div>
 
   <button class="btn" id="startBtn">ACTIVAR SISTEMA</button>
   <button class="btn secondary" id="demoBtn">MODO SIMULACIÓN (sin cámara/GPS)</button>
   <div id="statusLines"></div>
 </div>
+
 
 <!-- HUD -->
 <div id="hud">
@@ -435,7 +575,7 @@
   const ENEMY_NEARBY_RANGE = 150;
   const ALLY_WARN_COOLDOWN = 20000;
 
-  let profile = { totalKills:0, bestWave:1, eliteKills:0, pickupsCollected:0, rewardTokens:0, missions:{date:'',list:[]}, achievements:{} };
+  let profile = { totalKills:0, bestWave:1, eliteKills:0, pickupsCollected:0, rewardTokens:0, briefingSeen:false, missions:{date:'',list:[]}, achievements:{} };
 
   const FOV = 66;
   const MAX_RADAR_RANGE = 120;
@@ -524,6 +664,13 @@
 
   // ---------- DOM ----------
   const startScreen = document.getElementById('startScreen');
+  const briefingScreen = document.getElementById('briefingScreen');
+  const continueBriefingBtn = document.getElementById('continueBriefingBtn');
+  const skipBriefingBtn = document.getElementById('skipBriefingBtn');
+  const viewBriefingBtn = document.getElementById('viewBriefingBtn');
+  const tutorialScreen = document.getElementById('tutorialScreen');
+  const howToPlayBtn = document.getElementById('howToPlayBtn');
+  const closeTutorialBtn = document.getElementById('closeTutorialBtn');
   const statusLines = document.getElementById('statusLines');
   const startBtn = document.getElementById('startBtn');
   const demoBtn = document.getElementById('demoBtn');
@@ -608,6 +755,22 @@
 
   callsignInput.value = callsign;
 
+  function showBriefing(){
+    startScreen.style.display = 'none';
+    briefingScreen.classList.add('show');
+  }
+  function dismissBriefing(markSeen){
+    briefingScreen.classList.remove('show');
+    startScreen.style.display = 'flex';
+    if(markSeen && !profile.briefingSeen){ profile.briefingSeen = true; saveProfile(); }
+  }
+  continueBriefingBtn.addEventListener('click', ()=>dismissBriefing(true));
+  skipBriefingBtn.addEventListener('click', ()=>dismissBriefing(true));
+  viewBriefingBtn.addEventListener('click', showBriefing);
+
+  howToPlayBtn.addEventListener('click', ()=> tutorialScreen.classList.add('show'));
+  closeTutorialBtn.addEventListener('click', ()=> tutorialScreen.classList.remove('show'));
+
   document.querySelectorAll('.diffBtn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.diffBtn').forEach(b=>b.classList.remove('active'));
@@ -690,7 +853,7 @@
   async function loadProfile(){
     try{
       const res = await window.storage.get(PROFILE_KEY, false);
-      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, eliteKills:0, pickupsCollected:0, rewardTokens:0, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
+      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, eliteKills:0, pickupsCollected:0, rewardTokens:0, briefingSeen:false, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
     }catch(e){ /* first time playing */ }
     ensureDailyMissions();
     renderMissions();
@@ -1457,9 +1620,17 @@
     startScreen.style.display = 'flex';
   });
 
-  loadProfile();
+  loadProfile().then(()=>{
+    if(!profile.briefingSeen) showBriefing();
+  });
 
 })();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{ /* opcional, no bloquea el juego */ });
+  });
+}
 </script>
 </body>
 </html>

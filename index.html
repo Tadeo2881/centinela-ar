@@ -267,6 +267,11 @@
 
   .pickup{position:absolute; pointer-events:none; transform:translate(-50%,-50%); text-align:center;}
   .pickup .diamond{width:24px; height:24px; margin:0 auto; transform:rotate(45deg); border:2px solid var(--cyan); background:rgba(255,122,26,0.15);}
+  .pickup.inRange .diamond{animation:pickupReady 0.9s ease-in-out infinite;}
+  @keyframes pickupReady{
+    0%,100%{box-shadow:0 0 6px 1px rgba(255,202,58,0.5); transform:rotate(45deg) scale(1);}
+    50%{box-shadow:0 0 18px 5px rgba(255,202,58,0.95); transform:rotate(45deg) scale(1.18);}}
+  .pickup.inRange .tag{color:var(--gold);}
   .pickup.type-ammo .diamond{border-color:var(--amber); background:rgba(196,214,0,0.15);}
   .pickup.type-damage .diamond{border-color:var(--gold); background:rgba(255,202,58,0.22); box-shadow:0 0 10px rgba(255,202,58,0.55);}
   .pickup .tag{font-size:8px; margin-top:5px; letter-spacing:1px; color:var(--text-dim);}
@@ -442,7 +447,7 @@
     <div class="tutRow"><div class="legendSwatch type-armored"></div><p>BLINDADO — resiste la mitad del daño del rifle; el francotirador lo perfora sin resistencia.</p></div>
     <div class="tutRow"><div class="legendSwatch type-boss"></div><p>JEFE — aparece cada 5 olas, mucha vida y daño de área.</p></div>
     <div class="tutRow"><div class="legendSwatch type-boss2"></div><p>ENJAMBRE — jefe alterno cada 10 olas, más rápido y con movimiento errático.</p></div>
-    <div class="tutRow"><div class="legendSwatch pickup"></div><p>POTENCIADOR — apunta brevemente para recogerlo (escudo, munición o daño x2).</p></div>
+    <div class="tutRow"><div class="legendSwatch pickup"></div><p>POTENCIADOR — camina hasta estar a menos de 35m (el rombo empieza a parpadear en dorado) y apúntale para recogerlo. Duran 45 segundos antes de desaparecer.</p></div>
   </div>
 
   <div class="tutSection">
@@ -1528,7 +1533,8 @@ const Weapon3D = (function(){
     if(pickups.length >= 2) return;
     const types = Object.keys(PICKUP_TYPES);
     const type = types[Math.floor(Math.random()*types.length)];
-    const b = Math.random()*360, d = 15 + Math.random()*60;
+    // Aparecen cerca para que sean alcanzables caminando antes de que expiren.
+    const b = Math.random()*360, d = 8 + Math.random()*22;
     let base = simMode ? { lat: 19.4326, lon: -99.1332 } : playerPos;
     if(!base) return;
     const p = destPoint(base.lat, base.lon, b, d);
@@ -1537,15 +1543,23 @@ const Weapon3D = (function(){
 
   function collectPickup(pk){
     pickups = pickups.filter(p=>p.id !== pk.id);
-    sfxPickup(); vibrate(20);
-    if(pk.type === 'shield'){ shield = 100; killMsg('ESCUDO RESTAURADO', 'gold'); }
+    sfxPickup(); vibrate([30,20,60]);
+    if(pk.type === 'shield'){
+      shield = 100;
+      health = Math.min(100, health + 25);
+      shieldRegenBoostUntil = Date.now() + 20000;
+      killMsg('ESCUDO RESTAURADO · +25 VIDA', 'gold');
+    }
     else if(pk.type === 'ammo'){
       weapons.rifle.reserve = weapons.rifle.maxReserve;
       weapons.sniper.reserve = weapons.sniper.maxReserve;
-      killMsg('MUNICIÓN RESURTIDA', 'gold');
+      weapons.rifle.ammo = weapons.rifle.maxAmmo;
+      weapons.sniper.ammo = weapons.sniper.maxAmmo;
+      reloading = false;
+      killMsg('MUNICIÓN COMPLETA', 'gold');
     } else if(pk.type === 'damage'){
-      damageBoostUntil = Date.now() + 12000;
-      killMsg('DAÑO x2 ACTIVADO', 'gold');
+      damageBoostUntil = Math.max(Date.now(), damageBoostUntil) + 20000;
+      killMsg('DAÑO x2 · 20s', 'gold');
     }
     updateMissionProgress('pickup', null, 1);
     checkAchievements('pickup', {});
@@ -1590,7 +1604,7 @@ const Weapon3D = (function(){
     });
     enemies = survivors;
 
-    pickups = pickups.filter(pk => now - pk.spawnedAt < 25000);
+    pickups = pickups.filter(pk => now - pk.spawnedAt < 45000);
   }
 
   function showHitFeedback(amount, resisted){
@@ -1727,12 +1741,15 @@ const Weapon3D = (function(){
     pickups.forEach(pk=>{
       const p = project(pk.lat, pk.lon, pk.simBearing, pk.simDist);
       if(!p || !p.visible) return;
-      if(Math.abs(p.diff) <= tol && (simMode || p.dist < 20)){ collectPickup(pk); return; }
+      const inRange = simMode || p.dist < 35;
+      if(Math.abs(p.diff) <= tol && inRange){ collectPickup(pk); return; }
       const cfg = PICKUP_TYPES[pk.type];
+      const secsLeft = Math.max(0, Math.ceil((45000 - (now - pk.spawnedAt))/1000));
       const el = document.createElement('div');
-      el.className = 'pickup type-' + pk.type;
+      el.className = 'pickup type-' + pk.type + (inRange ? ' inRange' : '');
       el.style.left = p.xPct + '%'; el.style.top = p.yPct + '%';
-      el.innerHTML = '<div class="diamond"></div><div class="tag">' + cfg.label + '</div>';
+      const hint = inRange ? 'APUNTA PARA TOMAR' : ('ACÉRCATE · ' + Math.round(p.dist) + 'm');
+      el.innerHTML = '<div class="diamond"></div><div class="tag">' + cfg.label + '<br>' + hint + ' · ' + secsLeft + 's</div>';
       pickupsLayer.appendChild(el);
     });
 
@@ -2163,7 +2180,7 @@ const Weapon3D = (function(){
     syncTimer = setInterval(syncLeaderboard, 4000);
     if(!simMode) enemySyncTimer = setInterval(syncEnemies, 2500);
     pingTimer = setInterval(pollPings, 3500);
-    pickupTimer = setInterval(()=>{ if(pickups.length<2 && Math.random()<0.4) spawnPickup(); }, 6000);
+    pickupTimer = setInterval(()=>{ if(pickups.length<2 && Math.random()<0.7) spawnPickup(); }, 5000);
     timeFilterTimer = setInterval(applyTimeFilter, 60000);
   }
 

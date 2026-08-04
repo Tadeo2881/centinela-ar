@@ -217,19 +217,8 @@
   #comboRow{font-size:9px; letter-spacing:1px; color:var(--gold); font-family:'Orbitron',sans-serif; min-height:12px;}
   #boostRow{font-size:9px; letter-spacing:1px; color:var(--gold); font-family:'Orbitron',sans-serif; min-height:12px;}
 
-  #weaponView{position:absolute; left:6px; bottom:-6px; width:150px; height:100px; pointer-events:none; z-index:15;}
-  .weaponModel{position:absolute; inset:0; display:none; opacity:0.9;}
-  .weaponModel.active{display:block; animation: weaponBob 2.6s ease-in-out infinite;}
-  .weaponModel svg{width:100%; height:100%; overflow:visible;}
-  .weaponModel .wFill{fill:rgba(255,122,26,0.07); stroke:var(--cyan); stroke-width:1.6; filter:drop-shadow(0 0 3px rgba(255,122,26,0.35));}
-  .weaponModel .wStroke{fill:none; stroke:var(--cyan); stroke-width:1.6; opacity:0.9;}
-  .weaponModel.type-sniper .wFill, .weaponModel.type-sniper .wStroke{stroke:var(--purple); filter:drop-shadow(0 0 3px rgba(184,50,128,0.4));}
-  @keyframes weaponBob{0%,100%{transform:translateY(0) rotate(0);} 50%{transform:translateY(-4px) rotate(-0.5deg);}}
-  .weaponModel.fireKick{animation: weaponFire 0.16s ease-out;}
-  @keyframes weaponFire{0%{transform:translateY(0) rotate(0);} 35%{transform:translateY(9px) rotate(-3deg);} 100%{transform:translateY(0) rotate(0);}}
-  .weaponModel.reloadSpin{animation: weaponReload 1.4s ease-in-out;}
-  .weaponModel.reloadSpin.type-sniper{animation-duration:1.8s;}
-  @keyframes weaponReload{0%{transform:translateY(0) rotate(0);} 30%{transform:translateY(22px) rotate(-14deg);} 60%{transform:translateY(26px) rotate(-9deg);} 100%{transform:translateY(0) rotate(0);}}
+  #weaponView{position:absolute; left:6px; bottom:-6px; width:200px; height:110px; pointer-events:none; z-index:15;}
+  #weaponView canvas{width:100%; height:100%; display:block;}
 
   #rightPanel{position:absolute; right:16px; bottom:112px; display:flex; flex-direction:column; align-items:flex-end; gap:10px;}
   #weaponLabel{font-size:9px; color:var(--text-dim); letter-spacing:1.5px;}
@@ -493,27 +482,7 @@
     <div id="radar"><div id="radarSweep"></div><div id="radarSelf"></div></div>
   </div>
 
-  <div id="weaponView">
-    <div class="weaponModel type-rifle" id="modelRifle">
-      <svg viewBox="0 0 200 120">
-        <path class="wFill" d="M18,68 L118,68 L128,58 L172,58 L172,72 L128,72 L118,80 L18,80 Z"/>
-        <rect class="wStroke" x="58" y="48" width="16" height="20" rx="2"/>
-        <path class="wStroke" d="M172,62 L194,62"/>
-        <path class="wStroke" d="M38,80 L33,112 M53,80 L48,112"/>
-        <path class="wStroke" d="M118,68 L118,50 L96,50"/>
-      </svg>
-    </div>
-    <div class="weaponModel type-sniper" id="modelSniper">
-      <svg viewBox="0 0 220 120">
-        <path class="wFill" d="M8,74 L148,74 L158,66 L212,66 L212,78 L158,78 L148,86 L8,86 Z"/>
-        <rect class="wStroke" x="48" y="54" width="14" height="18" rx="2"/>
-        <rect class="wStroke" x="86" y="42" width="46" height="11" rx="3"/>
-        <circle class="wStroke" cx="92" cy="47.5" r="2.6"/>
-        <path class="wStroke" d="M28,86 L23,114 M43,86 L38,114"/>
-        <path class="wStroke" d="M212,72 L220,72"/>
-      </svg>
-    </div>
-  </div>
+  <div id="weaponView"></div>
 
   <div id="secondaryControls">
     <button class="smallBtn" id="pingBtn">PING</button>
@@ -536,6 +505,157 @@
   <button class="btn" id="restartBtn">REINICIAR PROTOCOLO</button>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/128/three.min.js"></script>
+<script>
+// ===== WEAPON 3D VIEWMODEL =====
+// Low-poly first-person weapon model rendered with Three.js over the camera feed.
+// Not photorealistic (no textures/assets) — built entirely from primitive geometry
+// so it stays a single self-contained file with no external model files.
+const Weapon3D = (function(){
+  let renderer, scene, camera, container;
+  let groups = {}, activeKey = 'rifle';
+  let kickT = 0, reloadT = 0, reloadDur = 1400;
+  let ready = false;
+
+  function buildWeapon(accentColor, isSniper){
+    const g = new THREE.Group();
+    const metal = new THREE.MeshStandardMaterial({ color:0x2a2018, metalness:0.75, roughness:0.35 });
+    const darkMetal = new THREE.MeshStandardMaterial({ color:0x100c08, metalness:0.6, roughness:0.5 });
+    const accent = new THREE.MeshStandardMaterial({ color:accentColor, emissive:accentColor, emissiveIntensity:0.55, metalness:0.3, roughness:0.4 });
+
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.32, 0.28), metal);
+    g.add(receiver);
+
+    const barrelLen = isSniper ? 1.55 : 0.9;
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, barrelLen, 10), darkMetal);
+    barrel.rotation.z = Math.PI/2;
+    barrel.position.set(0.75 + barrelLen/2, 0.02, 0);
+    g.add(barrel);
+
+    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.38, 0.18), accent);
+    mag.position.set(-0.12, -0.32, 0);
+    mag.rotation.z = 0.15;
+    g.add(mag);
+
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.18), metal);
+    stock.position.set(-0.95, -0.02, 0);
+    g.add(stock);
+
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.3, 0.16), darkMetal);
+    grip.position.set(-0.35, -0.28, 0);
+    grip.rotation.z = -0.3;
+    g.add(grip);
+
+    if(isSniper){
+      const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.55, 10), darkMetal);
+      scope.rotation.z = Math.PI/2;
+      scope.position.set(0.05, 0.22, 0);
+      g.add(scope);
+      const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.063, 0.063, 0.02, 10), accent);
+      lens.rotation.z = Math.PI/2;
+      lens.position.set(0.33, 0.22, 0);
+      g.add(lens);
+      [-1, 1].forEach(side=>{
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 6), darkMetal);
+        leg.position.set(1.15, -0.22, side*0.08);
+        leg.rotation.z = side*0.5;
+        g.add(leg);
+      });
+    } else {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.04, 0.05), accent);
+      rail.position.set(0.1, 0.19, 0);
+      g.add(rail);
+    }
+    return g;
+  }
+
+  function resize(){
+    if(!renderer || !container) return;
+    const w = container.clientWidth || 200, h = container.clientHeight || 110;
+    renderer.setSize(w, h, false);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+  }
+
+  function init(containerEl){
+    if(ready || !window.THREE) return;
+    container = containerEl;
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(32, 200/110, 0.1, 20);
+    camera.position.set(0.35, 0.55, 2.6);
+    camera.lookAt(0, -0.05, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    const dl = new THREE.DirectionalLight(0xffe4c4, 1.1);
+    dl.position.set(2, 3, 4);
+    scene.add(dl);
+    const rim = new THREE.PointLight(0xff7a1a, 0.9, 8);
+    rim.position.set(-1.5, 0.5, 1.5);
+    scene.add(rim);
+
+    groups.rifle = buildWeapon(0xff7a1a, false);
+    groups.sniper = buildWeapon(0xb83280, true);
+    groups.sniper.visible = false;
+    scene.add(groups.rifle);
+    scene.add(groups.sniper);
+
+    resize();
+    window.addEventListener('resize', resize);
+    ready = true;
+    requestAnimationFrame(animate);
+  }
+
+  function setWeapon(key){
+    if(!groups[key]) return;
+    if(groups[activeKey]) groups[activeKey].visible = false;
+    activeKey = key;
+    groups[activeKey].visible = true;
+  }
+
+  function kick(){ kickT = 1; }
+  function reloadAnim(durationMs){ reloadT = 1; reloadDur = Math.max(200, durationMs||1400); }
+
+  let lastT = performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    if(!ready) return;
+    const dt = Math.min(0.1, (now - lastT)/1000);
+    lastT = now;
+    const g = groups[activeKey];
+    if(g){
+      const time = now/1000;
+      const bobY = Math.sin(time*1.3)*0.025;
+      const bobRotZ = Math.sin(time*0.9)*0.012;
+
+      let kickOffset = 0, kickRotX = 0;
+      if(kickT > 0){
+        kickT = Math.max(0, kickT - dt*6);
+        kickOffset = kickT*0.18;
+        kickRotX = kickT*0.25;
+      }
+
+      let reloadRotZ = 0, reloadY = 0;
+      if(reloadT > 0){
+        reloadT = Math.max(0, reloadT - dt*(1000/reloadDur));
+        const p = Math.sin(reloadT*Math.PI);
+        reloadRotZ = -p*0.35;
+        reloadY = -p*0.25;
+      }
+
+      g.position.set(0, bobY + reloadY, kickOffset);
+      g.rotation.set(kickRotX, 0, bobRotZ + reloadRotZ);
+    }
+    renderer.render(scene, camera);
+  }
+
+  return { init, setWeapon, kick, reloadAnim };
+})();
+</script>
 <script>
 (function(){
   "use strict";
@@ -686,10 +806,9 @@
   const comboRow = document.getElementById('comboRow');
   const boostRow = document.getElementById('boostRow');
   const weaponLabel = document.getElementById('weaponLabel');
-  const weaponModels = { rifle: document.getElementById('modelRifle'), sniper: document.getElementById('modelSniper') };
-  function updateWeaponView(){
-    Object.keys(weaponModels).forEach(k=> weaponModels[k].classList.toggle('active', k === currentWeapon));
-  }
+  const weaponViewEl = document.getElementById('weaponView');
+  Weapon3D.init(weaponViewEl);
+  function updateWeaponView(){ Weapon3D.setWeapon(currentWeapon); }
   const ammoNum = document.getElementById('ammoNum');
   const ammoDen = document.getElementById('ammoDen');
   const reserveNum = document.getElementById('reserveNum');
@@ -1436,8 +1555,7 @@
     w.ammo--; nextFireAt = now + w.cooldown;
     currentWeapon === 'sniper' ? sfxShotHeavy() : sfxShot();
     vibrate(currentWeapon === 'sniper' ? 25 : 12);
-    const activeModel = weaponModels[currentWeapon];
-    activeModel.classList.remove('fireKick'); void activeModel.offsetWidth; activeModel.classList.add('fireKick');
+    Weapon3D.kick();
 
     const target = window.__lockedTarget;
     if(target){
@@ -1484,14 +1602,13 @@
     const w = weapons[currentWeapon];
     if(reloading || w.ammo === w.maxAmmo || w.reserve <= 0) return;
     reloading = true; sfxReload();
-    const activeModel = weaponModels[currentWeapon];
-    activeModel.classList.add('reloadSpin');
+    const dur = currentWeapon === 'sniper' ? 1800 : 1400;
+    Weapon3D.reloadAnim(dur);
     setTimeout(()=>{
       const needed = w.maxAmmo - w.ammo;
       const take = Math.min(needed, w.reserve);
       w.ammo += take; w.reserve -= take; reloading = false;
-      activeModel.classList.remove('reloadSpin');
-    }, currentWeapon === 'sniper' ? 1800 : 1400);
+    }, dur);
   }
 
   fireBtn.addEventListener('click', fire);

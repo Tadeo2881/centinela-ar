@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>CENTINELA // Protocolo de Realidad Táctica</title>
 
@@ -304,6 +307,19 @@
   .radarDot{position:absolute; width:6px; height:6px; border-radius:50%; background:var(--amber); transform:translate(-50%,-50%);}
   .radarDot.close{background:var(--danger);}
   .radarDot.boss{background:var(--danger); width:9px; height:9px; box-shadow:0 0 6px rgba(232,17,45,0.9);}
+  /* Aliados en azul frío: se distinguen de un vistazo de cualquier hostil. */
+  .radarDot.ally{background:var(--blue); width:8px; height:8px; box-shadow:0 0 6px rgba(47,155,255,0.9);}
+  .radarDot.ally.hurt{background:var(--danger); animation:allyBlink 0.7s ease-in-out infinite;}
+  @keyframes allyBlink{0%,100%{opacity:1;} 50%{opacity:0.25;}}
+
+  .allyMarker{position:absolute; transform:translate(-50%,-50%); text-align:center; pointer-events:none;}
+  .allyChevron{width:0; height:0; margin:0 auto;
+    border-left:9px solid transparent; border-right:9px solid transparent; border-bottom:14px solid var(--blue);
+    filter:drop-shadow(0 0 4px rgba(47,155,255,0.8));}
+  .allyTag{font-size:9px; color:var(--blue); letter-spacing:1px; margin-top:3px; white-space:nowrap;
+    text-shadow:0 0 6px rgba(0,0,0,0.9);}
+  .allyMarker.hurt .allyChevron{border-bottom-color:var(--danger); animation:allyBlink 0.7s ease-in-out infinite;}
+  .allyMarker.hurt .allyTag{color:var(--danger);}
   #radarSelf{position:absolute; top:50%; left:50%; width:5px; height:5px; background:var(--cyan); border-radius:50%; transform:translate(-50%,-50%);}
   #radar{pointer-events:auto; cursor:pointer;}
   #radarHint{position:absolute; bottom:2px; left:0; right:0; text-align:center; font-size:7px;
@@ -329,6 +345,8 @@
   .mapDot{border-radius:50%; border:2px solid var(--amber); background:rgba(196,214,0,0.3);}
   .mapDot.boss{border-color:var(--danger); background:rgba(232,17,45,0.4);}
   .mapDot.self{border-color:var(--cyan); background:var(--cyan);}
+  .mapDot.ally{border-color:var(--blue); background:rgba(47,155,255,0.6);}
+  .mapDot.allyHurt{border-color:var(--danger); background:rgba(232,17,45,0.6); animation:allyBlink 0.7s ease-in-out infinite;}
   .mapDot.pickup{border-color:var(--gold); background:rgba(255,202,58,0.35); border-radius:0; transform:rotate(45deg);}
 
   #secondaryControls{position:absolute; top:195px; right:16px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; pointer-events:auto;}
@@ -470,6 +488,7 @@
   <div class="tutSection">
     <h3>MULTIJUGADOR</h3>
     <p>Tu puntuación y estado se comparten. Los hostiles existen en coordenadas GPS reales: cualquier operativo cerca de ti puede ver y disparar a los mismos objetivos. Usa PING para avisarles de un peligro cercano.</p>
+    <p>Tus aliados aparecen en <b>azul</b>: como flecha con su nombre y vida en la vista de cámara, como punto azul en el radar, y ubicados en el mapa táctico. Si a alguno le baja la vida de 25%, su marcador parpadea en rojo.</p>
   </div>
 
   <button class="btn secondary" id="closeTutorialBtn">ENTENDIDO</button>
@@ -516,7 +535,7 @@
     <span class="bl"></span><span class="br"></span>
     <h1>CENTINELA</h1>
   </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.0</div>
+  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.5</div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
   <div id="mpStatus"></div>
 
@@ -1801,6 +1820,7 @@ const Weapon3D = (function(){
     let anyLocked = false;
     let closestVisible = null;
     const dots = [];
+    const allyDots = [];
     const tol = w.tolerance;
 
     enemies.forEach(en=>{
@@ -1848,10 +1868,43 @@ const Weapon3D = (function(){
       pickupsLayer.appendChild(el);
     });
 
+    // ----- ALIADOS: marcador en cámara + punto en radar -----
+    if(!simMode && playerPos){
+      Object.entries(leaderboard).forEach(([name, data])=>{
+        if(name === callsign) return;
+        if(data.lat == null || data.lon == null) return;
+        if(now - (data.lastSeen||0) > STALE_MS) return;
+
+        const ap = project(data.lat, data.lon, null, null);
+        if(!ap) return;
+
+        if(ap.dist <= MAX_RADAR_RANGE){
+          const relAngle = toRad(angleDiff(ap.bearing, heading));
+          const r = (ap.dist/MAX_RADAR_RANGE) * 40;
+          allyDots.push({ x:44+Math.sin(relAngle)*r, y:44-Math.cos(relAngle)*r, hurt:(data.health!=null && data.health<25) });
+        }
+
+        if(!ap.visible) return;
+        const el = document.createElement('div');
+        el.className = 'allyMarker' + ((data.health!=null && data.health<25) ? ' hurt' : '');
+        el.style.left = ap.xPct + '%';
+        el.style.top = Math.max(12, ap.yPct - 14) + '%';
+        el.innerHTML = '<div class="allyChevron"></div><div class="allyTag">' + name +
+          ' · ' + Math.round(ap.dist) + 'm<br>VIDA ' + (data.health!=null ? data.health : '--') + '%</div>';
+        markersLayer.appendChild(el);
+      });
+    }
+
     radar.querySelectorAll('.radarDot').forEach(d=>d.remove());
     dots.forEach(d=>{
       const el = document.createElement('div');
       el.className = 'radarDot' + (d.boss ? ' boss' : (d.close ? ' close' : ''));
+      el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
+      radar.appendChild(el);
+    });
+    allyDots.forEach(d=>{
+      const el = document.createElement('div');
+      el.className = 'radarDot ally' + (d.hurt ? ' hurt' : '');
       el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
       radar.appendChild(el);
     });
@@ -1900,6 +1953,17 @@ const Weapon3D = (function(){
     pickups.forEach(pk=>{
       const m = L.marker([pk.lat, pk.lon], { icon: makeDotIcon('pickup', 10) }).addTo(tacticalMap);
       m.bindTooltip((PICKUP_TYPES[pk.type]||{}).label || 'POTENCIADOR', { direction:'top', offset:[0,-8] });
+      mapMarkers.push(m);
+    });
+    // Aliados conectados
+    const now = Date.now();
+    Object.entries(leaderboard).forEach(([name, data])=>{
+      if(name === callsign) return;
+      if(data.lat == null || data.lon == null) return;
+      if(now - (data.lastSeen||0) > STALE_MS) return;
+      const hurt = data.health != null && data.health < 25;
+      const m = L.marker([data.lat, data.lon], { icon: makeDotIcon(hurt?'allyHurt':'ally', 14) }).addTo(tacticalMap);
+      m.bindTooltip(name + ' · VIDA ' + (data.health!=null?data.health:'--') + '%', { direction:'top', offset:[0,-9] });
       mapMarkers.push(m);
     });
   }
@@ -1969,7 +2033,9 @@ const Weapon3D = (function(){
     if(FB.ready){
       try{
         await FB.db.ref('leaderboard/' + callsign).set({
-          score, wave, lastSeen: Date.now(), health: Math.round(health)
+          score, wave, lastSeen: Date.now(), health: Math.round(health),
+          lat: (!simMode && playerPos) ? playerPos.lat : null,
+          lon: (!simMode && playerPos) ? playerPos.lon : null
         });
       }catch(e){ /* sin red: seguimos jugando */ }
       return;
@@ -2413,10 +2479,15 @@ const Weapon3D = (function(){
 
 })();
 
+// Limpia service workers y cachés previos: en GitHub Pages estaban sirviendo
+// versiones viejas del juego, lo que hacía imposible ver los cambios nuevos.
 if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('service-worker.js').catch(()=>{ /* opcional, no bloquea el juego */ });
-  });
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  }).catch(()=>{});
+}
+if(window.caches && caches.keys){
+  caches.keys().then(keys=>keys.forEach(k=>caches.delete(k))).catch(()=>{});
 }
 </script>
 </body>

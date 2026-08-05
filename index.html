@@ -37,17 +37,54 @@
     font-family:'Share Tech Mono', monospace; color:var(--text);}
   .display{font-family:'Orbitron', sans-serif;}
 
-  /* CENTINELA está diseñado para usarse siempre en vertical: apuntas girando el
-     cuerpo (brújula), no el teléfono. Si el teléfono queda en horizontal por
-     accidente, esto rota toda la página (cámara incluida) para que se vea
-     correctamente en vez de mostrar la imagen ladeada. */
-  @media screen and (orientation: landscape){
-    html{
-      width:100vh; height:100vw;
-      transform:rotate(90deg); transform-origin:top left;
-      position:absolute; top:0; left:100%;
-      overflow:hidden;
-    }
+  /* ===== MODO HORIZONTAL =====
+     En horizontal hay más ancho útil para barrer el horizonte, pero mucha menos
+     altura. El HUD se compacta y se reacomoda para no tapar la vista central. */
+  @media screen and (orientation: landscape) and (max-height: 500px){
+    #topBar{top:8px; left:48px; right:48px; font-size:9px;}
+    #scoreWave{top:30px; left:48px; font-size:9px;}
+    .cornerFrame{width:24px; height:24px;}
+    #cf-tl,#cf-tr{top:8px;} #cf-bl,#cf-br{bottom:8px;}
+    #cf-tl,#cf-bl{left:8px;} #cf-tr,#cf-br{right:8px;}
+
+    #vitals{bottom:14px; left:12px; width:120px; gap:4px;}
+    .vitalLabel{font-size:8px; width:32px;}
+    .barTrack{height:8px;}
+
+    #rightPanel{bottom:14px; right:96px; flex-direction:row; align-items:flex-end; gap:12px;}
+    #radar{width:64px; height:64px;}
+    #radarHint{font-size:6px;}
+    #ammoNum{font-size:20px;}
+
+    #weaponView{width:150px; height:74px; left:2px; bottom:-4px;}
+
+    #secondaryControls{top:auto; bottom:96px; right:12px; flex-direction:row; gap:6px;}
+    #secondaryControls .smallBtn{padding:5px 8px; font-size:7px;}
+
+    #controls{bottom:12px; right:12px; gap:12px;}
+    #fireBtn{width:64px; height:64px; font-size:11px;}
+    #reloadBtn{width:44px; height:44px; font-size:8px;}
+
+    #leaderboardPanel{top:44px; right:12px; width:130px; padding:6px;}
+    #killfeed{top:52px;}
+    .killMsg{font-size:10px; padding:3px 8px;}
+    #mapPanel{height:min(80vh, 300px); width:min(70vw, 340px);}
+    #alertBanner{font-size:17px;}
+
+    /* Pantallas de menú: menos aire vertical, contenido más ancho */
+    #startScreen{gap:7px; padding:12px 20px; justify-content:flex-start;}
+    #startScreen h1{font-size:24px;}
+    #startScreen .sub{font-size:9px; margin-top:-8px;}
+    .brackets{padding:8px 18px !important;}
+    #rankLine{font-size:10px;}
+    #mpStatus{font-size:9px; max-width:80vw;}
+    #missionsPanel, #rewardsPanel{max-width:80vw;}
+    .btn{padding:10px 22px; font-size:12px;}
+    #callsignInput{padding:7px 12px;}
+    #tutorialScreen, #settingsScreen, #briefingScreen{padding:16px 20px;}
+    #briefRing{width:min(30vh,140px); height:min(30vh,140px);}
+    #briefingScreen h2, #tutorialScreen h2, #settingsScreen h2{font-size:16px;}
+    .tutSection, .briefText{max-width:80vw;}
   }
 
   #stage{position:fixed; inset:0; overflow:hidden;}
@@ -535,7 +572,7 @@
     <span class="bl"></span><span class="br"></span>
     <h1>CENTINELA</h1>
   </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.5</div>
+  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.6</div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
   <div id="mpStatus"></div>
 
@@ -817,6 +854,7 @@ const Weapon3D = (function(){
 
     resize();
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', ()=>{ setTimeout(resize, 250); });
     ready = true;
     requestAnimationFrame(animate);
   }
@@ -1418,6 +1456,9 @@ const Weapon3D = (function(){
     }
   }
   window.addEventListener('online', updateMultiplayerStatus);
+  window.addEventListener('orientationchange', ()=>{
+    setTimeout(()=>{ if(tacticalMap && mapVisible) tacticalMap.invalidateSize(); }, 300);
+  });
   window.addEventListener('offline', updateMultiplayerStatus);
 
   // ---------- AUDIO ----------

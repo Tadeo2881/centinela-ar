@@ -77,6 +77,8 @@
   .brackets{padding:14px 22px !important;}
   #startScreen p.desc{max-width:340px; color:var(--text-dim); font-size:13px; line-height:1.6;}
   #startScreen p.mpnote{max-width:340px; color:var(--amber); font-size:11px; line-height:1.6; letter-spacing:0.5px;}
+  #mpStatus{font-size:10px; letter-spacing:1px; color:var(--text-dim); max-width:330px; line-height:1.5;}
+  #mpStatus.offline{color:var(--danger);}
   #rankLine{font-family:'Orbitron',sans-serif; font-size:12px; letter-spacing:2px; color:var(--gold);}
   #rankLine span{color:var(--text-dim); font-family:'Share Tech Mono',monospace; letter-spacing:1px;}
   #callsignWrap{display:flex; flex-direction:column; gap:6px; align-items:center;}
@@ -516,6 +518,7 @@
   </div>
   <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.0</div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
+  <div id="mpStatus"></div>
 
   <div class="linkRow">
     <button class="linkBtn" id="howToPlayBtn">CÓMO JUGAR</button>
@@ -1284,9 +1287,43 @@ const Weapon3D = (function(){
 
   const ACHIEVEMENT_TOTAL = 9;
 
+  // ---------- CAPA DE ALMACENAMIENTO PORTÁTIL ----------
+  // El juego puede correr en dos entornos distintos: dentro de Claude (donde existe
+  // window.storage) o publicado en la web (donde no existe). Esta capa usa lo que
+  // haya disponible para que el progreso se guarde en ambos casos.
+  const Store = (function(){
+    const hasClaudeStorage = typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+    let hasLocal = false;
+    try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); hasLocal = true; }catch(e){ hasLocal = false; }
+    const memory = {};
+
+    async function get(key, shared){
+      if(hasClaudeStorage){
+        try{ return await window.storage.get(key, shared); }catch(e){ return null; }
+      }
+      if(hasLocal){
+        const v = localStorage.getItem(key);
+        return v == null ? null : { key, value:v, shared:!!shared };
+      }
+      return memory[key] != null ? { key, value:memory[key], shared:!!shared } : null;
+    }
+    async function set(key, value, shared){
+      if(hasClaudeStorage){
+        try{ return await window.storage.set(key, value, shared); }catch(e){ return null; }
+      }
+      if(hasLocal){
+        try{ localStorage.setItem(key, value); }catch(e){}
+        return { key, value, shared:!!shared };
+      }
+      memory[key] = value;
+      return { key, value, shared:!!shared };
+    }
+    return { get, set, isCloud: hasClaudeStorage };
+  })();
+
   async function loadProfile(){
     try{
-      const res = await window.storage.get(PROFILE_KEY, false);
+      const res = await Store.get(PROFILE_KEY, false);
       if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' }, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
     }catch(e){ /* first time playing */ }
     if(!profile.settings) profile.settings = { volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' };
@@ -1303,8 +1340,21 @@ const Weapon3D = (function(){
     const achCount = Object.keys(profile.achievements||{}).length;
     rankLine.innerHTML = rankFor(profile.totalKills) + ' <span>· ' + profile.totalKills + ' BAJAS · OLA MÁX ' + profile.bestWave +
       ' · RÉCORD ' + (profile.bestScore||0) + ' · LOGROS ' + achCount + '/' + ACHIEVEMENT_TOTAL + '</span>';
+    updateMultiplayerStatus();
   }
-  function saveProfile(){ try{ window.storage.set(PROFILE_KEY, JSON.stringify(profile), false); }catch(e){} }
+  function saveProfile(){ try{ Store.set(PROFILE_KEY, JSON.stringify(profile), false); }catch(e){} }
+
+  function updateMultiplayerStatus(){
+    const el = document.getElementById('mpStatus');
+    if(!el) return;
+    if(Store.isCloud){
+      el.className = '';
+      el.textContent = 'MULTIJUGADOR ACTIVO · tu progreso y los hostiles se comparten con operativos cercanos.';
+    } else {
+      el.className = 'offline';
+      el.textContent = 'MODO INDIVIDUAL · tu progreso se guarda en este dispositivo, pero el multijugador necesita servidor (aún no configurado).';
+    }
+  }
 
   // ---------- AUDIO ----------
   let audioCtx = null;
@@ -1871,11 +1921,11 @@ const Weapon3D = (function(){
   async function syncLeaderboard(){
     try{
       let current = {};
-      try{ const res = await window.storage.get(LB_KEY, true); if(res && res.value) current = JSON.parse(res.value); }catch(e){ current = {}; }
+      try{ const res = await Store.get(LB_KEY, true); if(res && res.value) current = JSON.parse(res.value); }catch(e){ current = {}; }
       current[callsign] = { score, wave, lastSeen: Date.now(), health: Math.round(health) };
       const now = Date.now();
       Object.keys(current).forEach(name=>{ if(now - (current[name].lastSeen||0) > STALE_MS) delete current[name]; });
-      await window.storage.set(LB_KEY, JSON.stringify(current), true);
+      await Store.set(LB_KEY, JSON.stringify(current), true);
       leaderboard = current;
       renderLeaderboard();
       checkAllies();
@@ -1914,7 +1964,7 @@ const Weapon3D = (function(){
     if(simMode) return;
     try{
       let remote = [];
-      try{ const res = await window.storage.get(ENEMY_KEY, true); if(res && res.value) remote = JSON.parse(res.value); }catch(e){ remote = []; }
+      try{ const res = await Store.get(ENEMY_KEY, true); if(res && res.value) remote = JSON.parse(res.value); }catch(e){ remote = []; }
       const now = Date.now();
       const map = new Map();
       remote.forEach(en=>{
@@ -1937,7 +1987,7 @@ const Weapon3D = (function(){
         if(en.hp <= 0){ if(!recentlyKilled.has(en.id)) killMsg('OBJETIVO ELIMINADO POR ALIADO', 'ally'); }
         else aliveList.push(en);
       });
-      await window.storage.set(ENEMY_KEY, JSON.stringify(aliveList), true);
+      await Store.set(ENEMY_KEY, JSON.stringify(aliveList), true);
       enemies = aliveList;
     }catch(e){ /* offline — keep local list */ }
   }
@@ -1960,17 +2010,17 @@ const Weapon3D = (function(){
     killMsg('PING ENVIADO: ' + text);
     try{
       let list = [];
-      try{ const res = await window.storage.get(PING_KEY, true); if(res && res.value) list = JSON.parse(res.value); }catch(e){ list = []; }
+      try{ const res = await Store.get(PING_KEY, true); if(res && res.value) list = JSON.parse(res.value); }catch(e){ list = []; }
       const now = Date.now();
       list = list.filter(p=> now - p.ts < 20000);
       list.push({ from: callsign, text, ts: now, id: genId() });
       if(list.length > 15) list = list.slice(-15);
-      await window.storage.set(PING_KEY, JSON.stringify(list), true);
+      await Store.set(PING_KEY, JSON.stringify(list), true);
     }catch(e){}
   }
   async function pollPings(){
     try{
-      const res = await window.storage.get(PING_KEY, true);
+      const res = await Store.get(PING_KEY, true);
       if(!res || !res.value) return;
       const list = JSON.parse(res.value);
       const now = Date.now();

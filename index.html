@@ -656,6 +656,30 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+// ===== FIREBASE: multijugador en tiempo real =====
+// Sustituye al almacenamiento local para los datos COMPARTIDOS (marcador, hostiles,
+// pings). El progreso personal sigue guardándose en el dispositivo.
+var FB = { ready:false, db:null };
+(function(){
+  try{
+    if(typeof firebase === 'undefined') return;
+    firebase.initializeApp({
+      apiKey: "AIzaSyADTq-qdBS31C6XpicE9Xxe5dDK0sIRH2I",
+      authDomain: "centinela-ar.firebaseapp.com",
+      databaseURL: "https://centinela-ar-default-rtdb.firebaseio.com",
+      projectId: "centinela-ar",
+      storageBucket: "centinela-ar.firebasestorage.app",
+      messagingSenderId: "842615251423",
+      appId: "1:842615251423:web:3e092bd3fae456eb42246a"
+    });
+    FB.db = firebase.database();
+    FB.ready = true;
+  }catch(e){ FB.ready = false; }
+})();
+</script>
 <script>
 // ===== WEAPON 3D VIEWMODEL =====
 // Low-poly first-person weapon model rendered with Three.js over the camera feed.
@@ -1347,12 +1371,15 @@ const Weapon3D = (function(){
   function updateMultiplayerStatus(){
     const el = document.getElementById('mpStatus');
     if(!el) return;
-    if(Store.isCloud){
+    if(FB.ready){
       el.className = '';
-      el.textContent = 'MULTIJUGADOR ACTIVO · tu progreso y los hostiles se comparten con operativos cercanos.';
+      el.textContent = 'MULTIJUGADOR EN LÍNEA · los hostiles y el marcador se comparten en tiempo real con operativos cercanos.';
+    } else if(Store.isCloud){
+      el.className = '';
+      el.textContent = 'MULTIJUGADOR LOCAL · progreso guardado, sincronización limitada.';
     } else {
       el.className = 'offline';
-      el.textContent = 'MODO INDIVIDUAL · tu progreso se guarda en este dispositivo, pero el multijugador necesita servidor (aún no configurado).';
+      el.textContent = 'SIN CONEXIÓN AL SERVIDOR · modo individual; tu progreso se guarda en este dispositivo.';
     }
   }
 
@@ -1919,6 +1946,17 @@ const Weapon3D = (function(){
 
   // ---------- LEADERBOARD (shared) ----------
   async function syncLeaderboard(){
+    // Con Firebase: escribimos solo NUESTRA entrada; los demás llegan por escucha
+    // en tiempo real (ver attachRealtimeListeners), sin sondeo.
+    if(FB.ready){
+      try{
+        await FB.db.ref('leaderboard/' + callsign).set({
+          score, wave, lastSeen: Date.now(), health: Math.round(health)
+        });
+      }catch(e){ /* sin red: seguimos jugando */ }
+      return;
+    }
+    // Respaldo sin Firebase (solo este dispositivo)
     try{
       let current = {};
       try{ const res = await Store.get(LB_KEY, true); if(res && res.value) current = JSON.parse(res.value); }catch(e){ current = {}; }
@@ -1962,6 +2000,27 @@ const Weapon3D = (function(){
   // ---------- SHARED WORLD (enemies) ----------
   async function syncEnemies(){
     if(simMode) return;
+
+    if(FB.ready){
+      // Con Firebase escribimos cada hostil por separado, así dos jugadores no se
+      // pisan la lista completa. Las bajas se propagan borrando el nodo.
+      try{
+        const now = Date.now();
+        const updates = {};
+        enemies.forEach(en=>{
+          if(recentlyKilled.has(en.id)) return;
+          updates['enemies/' + en.id] = en;
+        });
+        recentlyKilled.forEach((t, id)=>{
+          updates['enemies/' + id] = null;         // eliminar del mundo compartido
+          if(now - t > KILL_MEMORY_MS) recentlyKilled.delete(id);
+        });
+        if(Object.keys(updates).length) await FB.db.ref().update(updates);
+      }catch(e){ /* sin red: seguimos con la lista local */ }
+      return;
+    }
+
+    // Respaldo sin Firebase
     try{
       let remote = [];
       try{ const res = await Store.get(ENEMY_KEY, true); if(res && res.value) remote = JSON.parse(res.value); }catch(e){ remote = []; }
@@ -2008,17 +2067,23 @@ const Weapon3D = (function(){
       }
     }
     killMsg('PING ENVIADO: ' + text);
+    const ping = { from: callsign, text, ts: Date.now(), id: genId() };
+    if(FB.ready){
+      try{ await FB.db.ref('pings/' + ping.id).set(ping); }catch(e){}
+      return;
+    }
     try{
       let list = [];
       try{ const res = await Store.get(PING_KEY, true); if(res && res.value) list = JSON.parse(res.value); }catch(e){ list = []; }
       const now = Date.now();
       list = list.filter(p=> now - p.ts < 20000);
-      list.push({ from: callsign, text, ts: now, id: genId() });
+      list.push(ping);
       if(list.length > 15) list = list.slice(-15);
       await Store.set(PING_KEY, JSON.stringify(list), true);
     }catch(e){}
   }
   async function pollPings(){
+    if(FB.ready) return; // con Firebase llegan por escucha, no por sondeo
     try{
       const res = await Store.get(PING_KEY, true);
       if(!res || !res.value) return;
@@ -2034,6 +2099,66 @@ const Weapon3D = (function(){
       });
     }catch(e){}
   }
+
+  // ---------- ESCUCHA EN TIEMPO REAL (Firebase) ----------
+  let realtimeAttached = false;
+  function attachRealtimeListeners(){
+    if(!FB.ready || realtimeAttached) return;
+    realtimeAttached = true;
+
+    // Marcador de operativos
+    FB.db.ref('leaderboard').on('value', snap=>{
+      const data = snap.val() || {};
+      const now = Date.now();
+      const fresh = {};
+      Object.keys(data).forEach(name=>{
+        if(now - (data[name].lastSeen||0) <= STALE_MS) fresh[name] = data[name];
+      });
+      leaderboard = fresh;
+      renderLeaderboard();
+      checkAllies();
+    });
+
+    // Mundo compartido de hostiles
+    FB.db.ref('enemies').on('value', snap=>{
+      if(simMode || !running) return;
+      const data = snap.val() || {};
+      const now = Date.now();
+      const merged = [];
+      Object.keys(data).forEach(id=>{
+        const en = data[id];
+        if(!en || recentlyKilled.has(id)) return;
+        if(now - (en.spawnedAt||0) > ENEMY_TTL_MS) return;
+        if(en.hp <= 0) return;
+        // Si tenemos una versión local más reciente (le acabamos de pegar), la conservamos.
+        const local = enemies.find(e=>e.id === id);
+        if(local && (local.updatedAt||0) > (en.updatedAt||0)) merged.push(local);
+        else merged.push(en);
+      });
+      // Conservar los recién generados por nosotros que aún no subieron.
+      enemies.forEach(en=>{
+        if(recentlyKilled.has(en.id)) return;
+        if(!merged.some(m=>m.id === en.id)) merged.push(en);
+      });
+      enemies = merged;
+    });
+
+    // Pings de aliados
+    FB.db.ref('pings').on('child_added', snap=>{
+      const p = snap.val();
+      if(!p || p.from === callsign) return;
+      if(seenPings.has(p.id)) return;
+      if(Date.now() - (p.ts||0) > 20000) return;
+      seenPings.add(p.id);
+      killMsg('PING · ' + p.from + ': ' + p.text, 'ally');
+      vibrate(40); sfxAlert(0);
+    });
+  }
+
+  // Limpieza al cerrar: quitar mi entrada del marcador para no dejar fantasmas.
+  window.addEventListener('beforeunload', ()=>{
+    if(FB.ready){ try{ FB.db.ref('leaderboard/' + callsign).remove(); }catch(e){} }
+  });
 
   // ---------- WEAPONS ----------
   function switchWeapon(){
@@ -2226,9 +2351,10 @@ const Weapon3D = (function(){
     loop._last = performance.now();
     requestAnimationFrame(loop);
 
+    attachRealtimeListeners();
     syncLeaderboard();
-    syncTimer = setInterval(syncLeaderboard, 4000);
-    if(!simMode) enemySyncTimer = setInterval(syncEnemies, 2500);
+    syncTimer = setInterval(syncLeaderboard, FB.ready ? 2000 : 4000);
+    if(!simMode) enemySyncTimer = setInterval(syncEnemies, FB.ready ? 1200 : 2500);
     pingTimer = setInterval(pollPings, 3500);
     pickupTimer = setInterval(()=>{ if(pickups.length<2 && Math.random()<0.7) spawnPickup(); }, 5000);
     timeFilterTimer = setInterval(applyTimeFilter, 60000);

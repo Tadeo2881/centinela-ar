@@ -1365,23 +1365,41 @@ const Weapon3D = (function(){
     rankLine.innerHTML = rankFor(profile.totalKills) + ' <span>· ' + profile.totalKills + ' BAJAS · OLA MÁX ' + profile.bestWave +
       ' · RÉCORD ' + (profile.bestScore||0) + ' · LOGROS ' + achCount + '/' + ACHIEVEMENT_TOTAL + '</span>';
     updateMultiplayerStatus();
+    watchFirebaseConnection();
   }
   function saveProfile(){ try{ Store.set(PROFILE_KEY, JSON.stringify(profile), false); }catch(e){} }
+
+  let fbConnected = false;
+  function watchFirebaseConnection(){
+    if(!FB.ready) return;
+    try{
+      FB.db.ref('.info/connected').on('value', snap=>{
+        fbConnected = snap.val() === true;
+        updateMultiplayerStatus();
+      });
+    }catch(e){}
+  }
 
   function updateMultiplayerStatus(){
     const el = document.getElementById('mpStatus');
     if(!el) return;
-    if(FB.ready){
+    const online = navigator.onLine !== false;
+    if(FB.ready && fbConnected){
       el.className = '';
       el.textContent = 'MULTIJUGADOR EN LÍNEA · los hostiles y el marcador se comparten en tiempo real con operativos cercanos.';
-    } else if(Store.isCloud){
-      el.className = '';
-      el.textContent = 'MULTIJUGADOR LOCAL · progreso guardado, sincronización limitada.';
+    } else if(FB.ready && !online){
+      el.className = 'offline';
+      el.textContent = 'SIN INTERNET · el multijugador requiere conexión. Puedes jugar solo; tu progreso se guarda en este dispositivo.';
+    } else if(FB.ready){
+      el.className = 'offline';
+      el.textContent = 'CONECTANDO AL SERVIDOR… si no cambia en unos segundos, revisa tu conexión a internet.';
     } else {
       el.className = 'offline';
-      el.textContent = 'SIN CONEXIÓN AL SERVIDOR · modo individual; tu progreso se guarda en este dispositivo.';
+      el.textContent = 'SIN SERVIDOR · modo individual; tu progreso se guarda en este dispositivo.';
     }
   }
+  window.addEventListener('online', updateMultiplayerStatus);
+  window.addEventListener('offline', updateMultiplayerStatus);
 
   // ---------- AUDIO ----------
   let audioCtx = null;

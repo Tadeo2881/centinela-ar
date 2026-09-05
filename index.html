@@ -521,6 +521,13 @@
   #controls{position:absolute; bottom:18px; right:16px; display:flex; align-items:center; gap:18px; pointer-events:auto;}
   #fireBtn{width:82px; height:82px; border-radius:50%; border:3px solid var(--danger); background:rgba(232,17,45,0.12);
     color:var(--danger); font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; letter-spacing:1px; cursor:pointer;}
+  /* Modo pistola: zona de disparo ampliada y fija para el gatillo mecánico */
+  body.gunMode #fireBtn{width:118px; height:118px; border-width:4px;
+    background:rgba(232,17,45,0.18); font-size:11px;}
+  body.gunMode #fireBtn::after{content:'ZONA GATILLO'; position:absolute;
+    bottom:-16px; left:0; right:0; font-size:7px; letter-spacing:1px; color:var(--text-dim);}
+  body.gunMode #controls{bottom:8px; right:8px;}
+  #fireBtn{position:relative;}
   #fireBtn:active{background:rgba(232,17,45,0.35); transform:scale(0.94);}
   #reloadBtn{width:56px; height:56px; border-radius:50%; border:2px solid var(--cyan); background:rgba(255,122,26,0.08);
     color:var(--cyan); font-family:'Orbitron',sans-serif; font-weight:700; font-size:9px; cursor:pointer;}
@@ -715,7 +722,7 @@
       <span class="bl"></span><span class="br"></span>
       <h1>CENTINELA</h1>
     </div>
-    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.4</span></div>
+    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.5</span></div>
   </div>
 
   <nav id="tabBar">
@@ -785,6 +792,15 @@
         <button class="diffBtn" data-diff="hard">DIFÍCIL</button>
       </div>
     </div>
+
+    <div class="tutSection toggleRow" style="max-width:100%;">
+      <h3>MODO PISTOLA 3D</h3>
+      <button class="toggleBtn off" id="gunModeToggle">DESACTIVADO</button>
+    </div>
+    <p style="font-size:10px;color:var(--text-dim);line-height:1.5;max-width:320px;">
+      Activa esto si usas el soporte impreso en 3D. Agranda la zona de disparo para que
+      el gatillo mecánico la toque siempre, y acepta gatillos Bluetooth.
+    </p>
 
     <div class="linkRow">
       <button class="linkBtn" id="howToPlayBtn">CÓMO JUGAR</button>
@@ -896,8 +912,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 44;
-var GAME_VERSION_LABEL = 'V4.4';
+var GAME_VERSION = 45;
+var GAME_VERSION_LABEL = 'V4.5';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1217,7 +1233,7 @@ const Weapon3D = (function(){
   }
   const ALLY_WARN_COOLDOWN = 20000;
 
-  let profile = { totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' }, missions:{date:'',list:[]}, achievements:{} };
+  let profile = { totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default', gunMode:false }, missions:{date:'',list:[]}, achievements:{} };
   let settings = profile.settings;
 
   const FOV = 66;
@@ -1460,10 +1476,27 @@ const Weapon3D = (function(){
     settings.vibration = !settings.vibration;
     applySettingsToUI();
   });
+  const gunModeToggle = document.getElementById('gunModeToggle');
+  function applyGunMode(){
+    document.body.classList.toggle('gunMode', !!settings.gunMode);
+    if(gunModeToggle){
+      gunModeToggle.textContent = settings.gunMode ? 'ACTIVADO' : 'DESACTIVADO';
+      gunModeToggle.classList.toggle('off', !settings.gunMode);
+    }
+  }
+  if(gunModeToggle){
+    gunModeToggle.addEventListener('click', ()=>{
+      settings.gunMode = !settings.gunMode;
+      applyGunMode();
+      saveProfile();
+    });
+  }
+
   colorblindToggle.addEventListener('click', ()=>{
     settings.colorblind = !settings.colorblind;
     applySettingsToUI();
     applyColorblind();
+    applyGunMode();
   });
 
   // ---------- PESTAÑAS ----------
@@ -1671,7 +1704,7 @@ const Weapon3D = (function(){
   async function loadProfile(){
     try{
       const res = await Store.get(PROFILE_KEY, false);
-      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' }, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
+      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default', gunMode:false }, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
     }catch(e){ /* first time playing */ }
     if(!profile.settings) profile.settings = { volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' };
     settings = profile.settings;
@@ -2836,7 +2869,18 @@ const Weapon3D = (function(){
   pingBtn.addEventListener('click', sendPing);
   weaponBtn.addEventListener('click', switchWeapon);
   riskBtn.addEventListener('click', escalateRisk);
-  document.addEventListener('keydown', (e)=>{ if(e.code === 'Space') fire(); if(e.code === 'KeyQ') switchWeapon(); });
+  // Soporte para gatillo físico. Los disparadores Bluetooth baratos (los de selfie)
+  // se comportan como un teclado y suelen mandar Volumen±, Enter o Espacio.
+  const TRIGGER_KEYS = ['Space','Enter','NumpadEnter','AudioVolumeUp','AudioVolumeDown','VolumeUp','VolumeDown'];
+  document.addEventListener('keydown', (e)=>{
+    if(TRIGGER_KEYS.includes(e.code) || TRIGGER_KEYS.includes(e.key)){
+      e.preventDefault();
+      fire();
+      return;
+    }
+    if(e.code === 'KeyQ') switchWeapon();
+    if(e.code === 'KeyR') startReload();
+  });
 
   // ---------- GAME LOOP ----------
   function loop(now){
@@ -3001,7 +3045,11 @@ const Weapon3D = (function(){
     await loadProfile();
     startBtn.disabled = false; demoBtn.disabled = false; trainBtn.disabled = false;
     statusLines.innerHTML = '';
+    // Volver siempre a la pestaña JUGAR al reiniciar
+    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b.dataset.tab === 'play'));
+    document.querySelectorAll('.tabPane').forEach(p=>p.classList.toggle('active', p.id === 'tab-play'));
     startScreen.style.display = 'flex';
+    startScreen.scrollTop = 0;
   });
 
   loadProfile().then(()=>{

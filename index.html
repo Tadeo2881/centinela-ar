@@ -145,7 +145,8 @@
 
   /* ===== START SCREEN ===== */
   #startScreen{position:fixed; inset:0; z-index:50; background:radial-gradient(ellipse at 50% 20%, #1a0f08 0%, #0a0503 75%);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:11px; padding:20px; text-align:center; overflow-y:auto;}
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    gap:11px; padding:22px 20px 20px; text-align:center; overflow-y:auto;}
   #startScreen h1{font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(26px,8vw,38px);
     letter-spacing:4px; margin:0; color:var(--cyan); text-shadow:0 0 18px rgba(255,122,26,0.55);}
   #startScreen .sub{color:var(--text-dim); letter-spacing:3px; font-size:11px; margin-top:-12px;}
@@ -169,6 +170,38 @@
   .diffBtn{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:1px; padding:8px 12px;
     border:1px solid var(--text-dim); color:var(--text-dim); background:transparent; cursor:pointer; border-radius:2px;}
   .diffBtn.active{border-color:var(--amber); color:var(--amber); background:rgba(196,214,0,0.1);}
+
+  /* ===== PESTAÑAS DE LA PANTALLA DE INICIO ===== */
+  .headerBlock{flex-shrink:0;}
+  #tabBar{display:flex; gap:0; width:100%; max-width:340px; border-bottom:1px solid var(--panel-edge); flex-shrink:0;}
+  .tabBtn{flex:1; background:transparent; border:none; border-bottom:2px solid transparent;
+    color:var(--text-dim); font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:1.5px;
+    padding:11px 4px; cursor:pointer; transition:color .18s, border-color .18s;}
+  .tabBtn.active{color:var(--cyan); border-bottom-color:var(--cyan);}
+
+  .tabPane{display:none; width:100%; max-width:340px; flex-direction:column;
+    align-items:center; gap:11px; padding-bottom:10px;}
+  .tabPane.active{display:flex; animation:tabFade .22s ease;}
+  @keyframes tabFade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .btn.primaryPlay{width:100%; padding:16px; font-size:15px;}
+  .altModes{display:flex; gap:8px; width:100%;}
+  .altModes .btn{flex:1; padding:10px 6px; font-size:10px; letter-spacing:1px;}
+
+  /* Estadísticas en PROGRESO */
+  #statsGrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%;}
+  .statCard{border:1px solid var(--panel-edge); background:var(--panel); padding:9px; text-align:center;}
+  .statCard .num{font-family:'Orbitron',sans-serif; font-size:19px; color:var(--cyan); font-weight:700;}
+  .statCard .lbl{font-size:8px; color:var(--text-dim); letter-spacing:1.5px; margin-top:3px;}
+
+  #achPanel{width:100%; border:1px solid var(--panel-edge); background:var(--panel); padding:10px; text-align:left;}
+  #achPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--cyan); cursor:pointer; list-style:none;}
+  #achPanel summary::-webkit-details-marker{display:none;}
+  #achPanel summary::after{content:'▾'; float:right;}
+  #achList{margin-top:8px;}
+  .achRow{display:flex; gap:8px; align-items:center; font-size:10px; padding:3px 0; color:var(--text-dim);}
+  .achRow.got{color:var(--gold);}
+  .achRow .mark{width:14px;}
 
   #rankingPanel{max-width:320px; width:100%; border:1px solid var(--gold); background:rgba(255,202,58,0.05); padding:10px; text-align:left;}
   #rankingPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--gold); cursor:pointer; list-style:none;}
@@ -677,62 +710,88 @@
 
 <!-- START SCREEN -->
 <div id="startScreen">
-  <div class="brackets">
-    <span class="bl"></span><span class="br"></span>
-    <h1>CENTINELA</h1>
-  </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.3</span></div>
-  <div id="rankLine">CARGANDO EXPEDIENTE...</div>
-  <div id="mpStatus"></div>
-
-  <div class="linkRow">
-    <button class="linkBtn" id="howToPlayBtn">CÓMO JUGAR</button>
-    <button class="linkBtn" id="viewBriefingBtn">VER BRIEFING</button>
-    <button class="linkBtn" id="settingsBtn">AJUSTES</button>
-  </div>
-
-  <div id="diffWrap">
-    <label>DIFICULTAD</label>
-    <div class="diffRow">
-      <button class="diffBtn" data-diff="easy">FÁCIL</button>
-      <button class="diffBtn active" data-diff="normal">NORMAL</button>
-      <button class="diffBtn" data-diff="hard">DIFÍCIL</button>
+  <div class="headerBlock">
+    <div class="brackets">
+      <span class="bl"></span><span class="br"></span>
+      <h1>CENTINELA</h1>
     </div>
+    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.4</span></div>
   </div>
 
-  <div id="callsignWrap">
-    <label for="callsignInput">ALIAS DE OPERATIVO</label>
-    <input id="callsignInput" type="text" maxlength="14" placeholder="OPERATIVO-0000">
-  </div>
+  <nav id="tabBar">
+    <button class="tabBtn active" data-tab="play">JUGAR</button>
+    <button class="tabBtn" data-tab="progress">PROGRESO</button>
+    <button class="tabBtn" data-tab="config">AJUSTES</button>
+  </nav>
 
-  <details id="rankingPanel" open>
-    <summary>RANKING GLOBAL</summary>
-    <div id="rankingList"><div class="rkEmpty">cargando…</div></div>
-  </details>
+  <!-- PESTAÑA: JUGAR -->
+  <section class="tabPane active" id="tab-play">
+    <button class="btn primaryPlay" id="startBtn">ACTIVAR SISTEMA</button>
+    <div id="mpStatus"></div>
 
-  <details id="missionsPanel" open>
-    <summary>MISIONES DE HOY</summary>
-    <div id="missionsList"></div>
-  </details>
-
-  <div id="rewardsPanel">
-    <details>
-      <summary><span>RECOMPENSAS</span><span id="tokensLeft">0 disponibles</span></summary>
-      <div class="rBody">
-        <div class="rHint">Cada misión completada te da 1 token. Elige tú qué bonificación llevar a tu próxima partida.</div>
-        <button class="rewardBtn" data-reward="points"><span>BONO DE PUNTOS +50</span><span class="badge" id="badge-points">0</span></button>
-        <button class="rewardBtn" data-reward="ammo"><span>RESERVA +50% AL INICIO</span><span class="badge" id="badge-ammo">0</span></button>
-        <button class="rewardBtn" data-reward="shield"><span>ESCUDO REFORZADO (30s)</span><span class="badge" id="badge-shield">0</span></button>
-        <button class="rewardBtn" data-reward="damage"><span>DAÑO x2 AL ARRANCAR (15s)</span><span class="badge" id="badge-damage">0</span></button>
-        <button id="clearRewardsBtn">limpiar selección</button>
-      </div>
+    <details id="missionsPanel" open>
+      <summary>MISIONES DE HOY</summary>
+      <div id="missionsList"></div>
     </details>
-  </div>
 
-  <button class="btn" id="startBtn">ACTIVAR SISTEMA</button>
-  <button class="btn secondary" id="trainBtn">MODO ENTRENAMIENTO (sin daño)</button>
-  <button class="btn secondary" id="demoBtn">MODO SIMULACIÓN (sin cámara/GPS)</button>
-  <div id="statusLines"></div>
+    <details id="rankingPanel" open>
+      <summary>RANKING GLOBAL</summary>
+      <div id="rankingList"><div class="rkEmpty">cargando…</div></div>
+    </details>
+
+    <div id="rewardsPanel">
+      <details>
+        <summary><span>RECOMPENSAS</span><span id="tokensLeft">0 disponibles</span></summary>
+        <div class="rBody">
+          <div class="rHint">Cada misión completada te da 1 token. Elige tú qué bonificación llevar a tu próxima partida.</div>
+          <button class="rewardBtn" data-reward="points"><span>BONO DE PUNTOS +50</span><span class="badge" id="badge-points">0</span></button>
+          <button class="rewardBtn" data-reward="ammo"><span>RESERVA +50% AL INICIO</span><span class="badge" id="badge-ammo">0</span></button>
+          <button class="rewardBtn" data-reward="shield"><span>ESCUDO REFORZADO (30s)</span><span class="badge" id="badge-shield">0</span></button>
+          <button class="rewardBtn" data-reward="damage"><span>DAÑO x2 AL ARRANCAR (15s)</span><span class="badge" id="badge-damage">0</span></button>
+          <button id="clearRewardsBtn">limpiar selección</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="altModes">
+      <button class="btn secondary" id="trainBtn">ENTRENAMIENTO</button>
+      <button class="btn secondary" id="demoBtn">SIMULACIÓN</button>
+    </div>
+    <div id="statusLines"></div>
+  </section>
+
+  <!-- PESTAÑA: PROGRESO -->
+  <section class="tabPane" id="tab-progress">
+    <div id="rankLine">CARGANDO EXPEDIENTE...</div>
+    <div id="statsGrid"></div>
+    <details id="achPanel" open>
+      <summary>LOGROS</summary>
+      <div id="achList"></div>
+    </details>
+  </section>
+
+  <!-- PESTAÑA: AJUSTES -->
+  <section class="tabPane" id="tab-config">
+    <div id="callsignWrap">
+      <label for="callsignInput">ALIAS DE OPERATIVO</label>
+      <input id="callsignInput" type="text" maxlength="14" placeholder="OPERATIVO-0000">
+    </div>
+
+    <div id="diffWrap">
+      <label>DIFICULTAD</label>
+      <div class="diffRow">
+        <button class="diffBtn" data-diff="easy">FÁCIL</button>
+        <button class="diffBtn active" data-diff="normal">NORMAL</button>
+        <button class="diffBtn" data-diff="hard">DIFÍCIL</button>
+      </div>
+    </div>
+
+    <div class="linkRow">
+      <button class="linkBtn" id="howToPlayBtn">CÓMO JUGAR</button>
+      <button class="linkBtn" id="viewBriefingBtn">BRIEFING</button>
+      <button class="linkBtn" id="settingsBtn">SONIDO Y SKINS</button>
+    </div>
+  </section>
 </div>
 
 
@@ -837,8 +896,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 43;
-var GAME_VERSION_LABEL = 'V4.3';
+var GAME_VERSION = 44;
+var GAME_VERSION_LABEL = 'V4.4';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1407,6 +1466,50 @@ const Weapon3D = (function(){
     applyColorblind();
   });
 
+  // ---------- PESTAÑAS ----------
+  document.querySelectorAll('.tabBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tabPane').forEach(p=>p.classList.toggle('active', p.id === 'tab-' + tab));
+      if(tab === 'progress') renderProgress();
+      startScreen.scrollTop = 0;
+    });
+  });
+
+  // Catálogo de logros para mostrarlos con nombre legible en PROGRESO
+  const ACH_LIST = [
+    ['bossHunter','CAZADOR DE JEFES'], ['streak10','RACHA IMPARABLE'],
+    ['wave10','SUPERVIVIENTE'], ['marathoner','MARATONISTA'],
+    ['eliteHunter','CAZADOR DE ÉLITES'], ['sharpshooter','TIRADOR DE PRECISIÓN'],
+    ['centurion','CENTURIÓN'], ['scavenger','RECOLECTOR'],
+    ['nightOwl','OJOS EN LA OSCURIDAD']
+  ];
+
+  function renderProgress(){
+    const grid = document.getElementById('statsGrid');
+    if(grid){
+      const stats = [
+        [profile.totalKills || 0, 'BAJAS TOTALES'],
+        [profile.bestScore || 0, 'RÉCORD'],
+        [profile.bestWave || 1, 'OLA MÁXIMA'],
+        [(profile.rewardTokens || 0), 'TOKENS']
+      ];
+      grid.innerHTML = stats.map(([n,l]) =>
+        '<div class="statCard"><div class="num">' + n + '</div><div class="lbl">' + l + '</div></div>'
+      ).join('');
+    }
+    const achEl = document.getElementById('achList');
+    if(achEl){
+      const got = profile.achievements || {};
+      achEl.innerHTML = ACH_LIST.map(([k, name])=>{
+        const has = !!got[k];
+        return '<div class="achRow' + (has ? ' got' : '') + '"><span class="mark">' +
+               (has ? '✓' : '·') + '</span><span>' + name + '</span></div>';
+      }).join('');
+    }
+  }
+
   document.querySelectorAll('.diffBtn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.diffBtn').forEach(b=>b.classList.remove('active'));
@@ -1585,6 +1688,7 @@ const Weapon3D = (function(){
     rankLine.innerHTML = rankFor(profile.totalKills) + ' <span>· ' + profile.totalKills + ' BAJAS · OLA MÁX ' + profile.bestWave +
       ' · RÉCORD ' + (profile.bestScore||0) + ' · LOGROS ' + achCount + '/' + ACHIEVEMENT_TOTAL + '</span>';
     updateMultiplayerStatus();
+    renderProgress();
     watchFirebaseConnection();
     watchVersion();
     watchRanking();

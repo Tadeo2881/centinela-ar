@@ -87,7 +87,42 @@
     .tutSection, .briefText{max-width:80vw;}
   }
 
+  /* Transiciones suaves entre pantallas: antes todo aparecía de golpe. */
+  #briefingScreen, #tutorialScreen, #settingsScreen, #gameOver, #mapPanel{
+    opacity:0; transition:opacity .28s ease;}
+  #briefingScreen.show, #tutorialScreen.show, #settingsScreen.show,
+  #gameOver.active, #mapPanel.show{opacity:1;}
+  #startScreen{animation:screenFade .3s ease;}
+  #hud.active{animation:screenFade .35s ease;}
+  @keyframes screenFade{from{opacity:0;} to{opacity:1;}}
+  #gameOver.active h2{animation:goDrop .45s cubic-bezier(.2,.9,.3,1.3);}
+  @keyframes goDrop{from{opacity:0; transform:translateY(-16px) scale(0.9);} to{opacity:1; transform:none;}}
+
+  /* Estado de cobertura: viñeta que simula estar agachado tras algo. */
+  #coverOverlay{position:fixed; inset:0; z-index:17; pointer-events:none; opacity:0;
+    transition:opacity .25s ease;
+    background:linear-gradient(to top, rgba(10,5,3,0.96) 0%, rgba(10,5,3,0.75) 26%, transparent 55%);}
+  #hud.covered ~ #coverOverlay, body.covered #coverOverlay{opacity:1;}
+  #coverBadge{position:fixed; bottom:38%; left:50%; transform:translateX(-50%); z-index:26;
+    font-family:'Orbitron',sans-serif; font-size:12px; letter-spacing:3px; color:var(--blue);
+    text-shadow:0 0 10px rgba(0,0,0,0.9); display:none; text-align:center; pointer-events:none;}
+  #coverBadge small{display:block; font-family:'Share Tech Mono',monospace; font-size:9px;
+    letter-spacing:1px; color:var(--text-dim); margin-top:4px; text-transform:none;}
+  body.covered #coverBadge{display:block; animation:coverPulse 1.6s ease-in-out infinite;}
+  @keyframes coverPulse{0%,100%{opacity:0.75;} 50%{opacity:1;}}
+
   #stage{position:fixed; inset:0; overflow:hidden;}
+
+  /* Aviso de nueva versión */
+  #updateNotice{position:fixed; top:0; left:0; right:0; z-index:90; display:none;
+    align-items:center; justify-content:center; gap:14px; padding:10px 14px;
+    background:var(--gold); color:#1a0f08; font-family:'Orbitron',sans-serif;
+    font-size:11px; letter-spacing:1.5px; font-weight:700;
+    box-shadow:0 3px 16px rgba(0,0,0,0.6);}
+  #updateNotice.show{display:flex;}
+  #updateNowBtn{background:#1a0f08; color:var(--gold); border:none; border-radius:3px;
+    font-family:'Orbitron',sans-serif; font-weight:700; font-size:10px; letter-spacing:1px;
+    padding:7px 14px; cursor:pointer;}
   #stage.shake{animation:screenShake 0.32s ease;}
   @keyframes screenShake{
     0%{transform:translate(0,0);} 15%{transform:translate(-6px,3px);} 30%{transform:translate(5px,-4px);}
@@ -286,24 +321,64 @@
     20%{opacity:1; transform:translate(-50%,-4px) scale(1.1);}
     100%{opacity:0; transform:translate(-50%,-34px) scale(1);}}
 
-  .marker.hitFlash .box{background:rgba(255,255,255,0.55); border-color:#fff !important;}
+  .marker.hitFlash{--mk:#ffffff;}
+  .marker.hitFlash .box{filter:drop-shadow(0 0 12px rgba(255,255,255,0.95));}
+  .marker.hitFlash .box::before{opacity:1;}
 
   .hitLine{position:absolute; height:2px; background:linear-gradient(90deg, rgba(232,17,45,0.95), rgba(232,17,45,0));
     transform-origin:0 50%; pointer-events:none; animation:hitFade .3s ease forwards;}
   @keyframes hitFade{0%{opacity:1;} 100%{opacity:0;}}
 
   .marker{position:absolute; pointer-events:none; transform:translate(-50%,-50%); text-align:center;}
-  .marker .box{border:2px solid var(--amber); width:46px; height:46px; position:relative; margin:0 auto;}
+  /* Marcador de hostil: corchetes de puntería tipo HUD, no un cuadro plano.
+     Los cuatro ángulos se dibujan con gradientes para que solo se vean las esquinas. */
+  .marker .box{
+    width:48px; height:48px; position:relative; margin:0 auto; border:none;
+    background:
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) left top/13px 2.5px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) left top/2.5px 13px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) right top/13px 2.5px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) right top/2.5px 13px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) left bottom/13px 2.5px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) left bottom/2.5px 13px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) right bottom/13px 2.5px no-repeat,
+      linear-gradient(var(--mk,var(--amber)),var(--mk,var(--amber))) right bottom/2.5px 13px no-repeat;
+    animation:markerBreathe 2.2s ease-in-out infinite;
+  }
+  @keyframes markerBreathe{0%,100%{opacity:0.82;} 50%{opacity:1;}}
+  /* Núcleo interior: da volumen sin necesidad de un modelo 3D por enemigo */
+  .marker .box::before{
+    content:''; position:absolute; inset:12px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.5), transparent 60%),
+               radial-gradient(circle, var(--mk,var(--amber)) 0%, transparent 72%);
+    opacity:0.55;
+  }
+  /* Línea de escaneo que recorre el marcador */
+  .marker .box::after{
+    content:''; position:absolute; left:3px; right:3px; height:2px;
+    background:linear-gradient(90deg, transparent, var(--mk,var(--amber)), transparent);
+    opacity:0.75; animation:markerScan 2.6s linear infinite;
+  }
+  @keyframes markerScan{0%{top:4px;} 50%{top:calc(100% - 6px);} 100%{top:4px;}}
   .marker .tag{font-size:9px; color:var(--amber); margin-top:3px; letter-spacing:1px; white-space:nowrap;}
   .marker .hpbar{position:absolute; bottom:-8px; left:0; right:0; height:3px; background:rgba(255,255,255,0.15);}
   .marker .hpbar i{display:block; height:100%; background:var(--amber);}
-  .marker.type-runner .box{border-color:var(--blue);} .marker.type-runner .tag{color:var(--blue);} .marker.type-runner .hpbar i{background:var(--blue);}
-  .marker.type-sniper .box{border-color:var(--purple); border-style:dashed;} .marker.type-sniper .tag{color:var(--purple);} .marker.type-sniper .hpbar i{background:var(--purple);}
-  .marker.type-armored .box{border-color:var(--text); border-width:3px;} .marker.type-armored .tag{color:var(--text);} .marker.type-armored .hpbar i{background:var(--text);}
-  .marker.type-boss .box{border-color:var(--danger); width:72px; height:72px; border-width:3px;} .marker.type-boss .tag{color:var(--danger); font-size:10px; font-weight:700;} .marker.type-boss .hpbar i{background:var(--danger);}
-  .marker.type-boss2 .box{border-color:var(--gold); width:60px; height:60px; border-width:3px; border-style:dotted;} .marker.type-boss2 .tag{color:var(--gold); font-size:10px; font-weight:700;} .marker.type-boss2 .hpbar i{background:var(--gold);}
-  .marker.elite .box{box-shadow:0 0 14px 2px rgba(255,202,58,0.7); border-color:var(--gold);} .marker.elite .tag{color:var(--gold);}
-  .marker.inreticle .box{border-color:var(--danger) !important; box-shadow:0 0 14px rgba(232,17,45,0.7) !important;}
+  /* Cada tipo solo cambia --mk (su color); los corchetes lo heredan. */
+  .marker.type-runner{--mk:var(--blue);}
+  .marker.type-sniper{--mk:var(--purple);}
+  .marker.type-armored{--mk:var(--text);}
+  .marker.type-boss{--mk:var(--danger);}
+  .marker.type-boss2{--mk:var(--gold);}
+  .marker.elite{--mk:var(--gold);}
+  .marker.inreticle{--mk:var(--danger);}
+  .marker .tag{color:var(--mk, var(--amber));}
+  .marker .hpbar i{background:var(--mk, var(--amber));}
+  .marker.type-boss .box{width:70px; height:70px;}
+  .marker.type-boss .tag, .marker.type-boss2 .tag{font-size:10px; font-weight:700;}
+  .marker.type-boss2 .box{width:60px; height:60px;}
+  .marker.elite .box{filter:drop-shadow(0 0 7px rgba(255,202,58,0.85));}
+  .marker.inreticle .box{filter:drop-shadow(0 0 9px rgba(232,17,45,0.9)); animation:none; opacity:1;}
+  .marker.inreticle .box::before{opacity:0.8;}
   .marker.inreticle .tag{color:var(--danger) !important;}
   .marker.inreticle .hpbar i{background:var(--danger) !important;}
 
@@ -446,6 +521,14 @@
   <div id="noise"></div>
 </div>
 
+<div id="updateNotice">
+  <span>NUEVA VERSIÓN DISPONIBLE</span>
+  <button id="updateNowBtn">ACTUALIZAR</button>
+</div>
+
+<div id="coverOverlay"></div>
+<div id="coverBadge">EN COBERTURA<small>daño reducido · levanta el teléfono para disparar</small></div>
+
 <div id="dmgFlash"></div>
 <div id="dangerPulse"></div>
 
@@ -518,6 +601,16 @@
   </div>
 
   <div class="tutSection">
+    <h3>CUBRIRSE</h3>
+    <p>Inclina el teléfono hacia el suelo para agacharte detrás de una pared, un coche o lo que tengas cerca. Mientras estés cubierto recibes solo el 20% del daño, pero <b>no puedes disparar</b>: tienes que levantar el teléfono para volver a atacar. Úsalo para recuperar escudo cuando te estén rodeando.</p>
+  </div>
+
+  <div class="tutSection">
+    <h3>MODO ENTRENAMIENTO</h3>
+    <p>Desde la pantalla de inicio puedes entrar en entrenamiento: el juego funciona igual con cámara y GPS, pero no recibes daño. Sirve para practicar a apuntar y girarte sin morir. No cuenta para el récord ni aparece en el marcador global.</p>
+  </div>
+
+  <div class="tutSection">
     <h3>MAPA TÁCTICO</h3>
     <p>Toca el radar (círculo abajo a la derecha) para abrir un mapa con las calles reales de tu zona, mostrando la posición exacta de los hostiles y potenciadores a tu alrededor. Vuelve a tocarlo o usa CERRAR para volver al combate.</p>
   </div>
@@ -572,7 +665,7 @@
     <span class="bl"></span><span class="br"></span>
     <h1>CENTINELA</h1>
   </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · V3.6</div>
+  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V3.9</span></div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
   <div id="mpStatus"></div>
 
@@ -596,7 +689,7 @@
     <input id="callsignInput" type="text" maxlength="14" placeholder="OPERATIVO-0000">
   </div>
 
-  <details id="missionsPanel">
+  <details id="missionsPanel" open>
     <summary>MISIONES DE HOY</summary>
     <div id="missionsList"></div>
   </details>
@@ -616,6 +709,7 @@
   </div>
 
   <button class="btn" id="startBtn">ACTIVAR SISTEMA</button>
+  <button class="btn secondary" id="trainBtn">MODO ENTRENAMIENTO (sin daño)</button>
   <button class="btn secondary" id="demoBtn">MODO SIMULACIÓN (sin cámara/GPS)</button>
   <div id="statusLines"></div>
 </div>
@@ -630,7 +724,7 @@
   <div class="cornerFrame" id="cf-br"></div>
 
   <div id="topBar">
-    <div class="sysname">CENTINELA // ACTIVO</div>
+    <div class="sysname" id="sysName">CENTINELA // ACTIVO</div>
     <div id="coords">LAT -- · LON --</div>
   </div>
 
@@ -707,6 +801,7 @@
   <div class="stat">Ola alcanzada: <b id="finalWave">1</b></div>
   <div class="rankup" id="bestScoreLine"></div>
   <div class="rankup" id="rankupLine"></div>
+  <button class="btn" id="shareBtn">COMPARTIR RESULTADO</button>
   <button class="btn" id="restartBtn">REINICIAR PROTOCOLO</button>
 </div>
 
@@ -718,6 +813,10 @@
 // ===== FIREBASE: multijugador en tiempo real =====
 // Sustituye al almacenamiento local para los datos COMPARTIDOS (marcador, hostiles,
 // pings). El progreso personal sigue guardándose en el dispositivo.
+// Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
+// solo para que nadie se quede jugando una versión vieja (y desincronizado).
+var GAME_VERSION = 39;
+var GAME_VERSION_LABEL = 'V3.9';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -965,9 +1064,14 @@ const Weapon3D = (function(){
 
   // ---------- STATE ----------
   let simMode = false;
+  let trainingMode = false;
   let playerPos = null;
   let heading = 0;
   let headingAvailable = false;
+  let pitch = 90, pitchAvailable = false;
+  let inCover = false;
+  const COVER_PITCH = 40;      // por debajo de esto se considera "agachado"
+  const COVER_REDUCTION = 0.2; // recibe solo el 20% del daño
   let enemies = [];
   let pickups = [];
   let reloading = false;
@@ -1110,6 +1214,8 @@ const Weapon3D = (function(){
   const statusLines = document.getElementById('statusLines');
   const startBtn = document.getElementById('startBtn');
   const demoBtn = document.getElementById('demoBtn');
+  const trainBtn = document.getElementById('trainBtn');
+  const shareBtn = document.getElementById('shareBtn');
   const hud = document.getElementById('hud');
   const camVideo = document.getElementById('cam');
   const camFallback = document.getElementById('camFallback');
@@ -1194,6 +1300,7 @@ const Weapon3D = (function(){
   });
 
   callsignInput.value = callsign;
+  (function(){ const v = document.getElementById('verLabel'); if(v) v.textContent = GAME_VERSION_LABEL; })();
 
   function showBriefing(){
     startScreen.style.display = 'none';
@@ -1423,10 +1530,57 @@ const Weapon3D = (function(){
       ' · RÉCORD ' + (profile.bestScore||0) + ' · LOGROS ' + achCount + '/' + ACHIEVEMENT_TOTAL + '</span>';
     updateMultiplayerStatus();
     watchFirebaseConnection();
+    watchVersion();
+    const upBtn = document.getElementById('updateNowBtn');
+    if(upBtn && !upBtn.dataset.bound){
+      upBtn.dataset.bound = '1';
+      upBtn.addEventListener('click', forceReload);
+    }
   }
   function saveProfile(){ try{ Store.set(PROFILE_KEY, JSON.stringify(profile), false); }catch(e){} }
 
   let fbConnected = false;
+  // ---------- ACTUALIZACIÓN AUTOMÁTICA ----------
+  // El cliente más nuevo que se conecte eleva la versión publicada. Los demás la
+  // detectan y se recargan solos, así nadie queda atrapado en una versión vieja.
+  let updatePending = false;
+  function watchVersion(){
+    if(!FB.ready) return;
+    try{
+      const ref = FB.db.ref('meta/version');
+      // Publicar la nuestra si es más nueva que la registrada
+      ref.transaction(cur => (cur == null || GAME_VERSION > cur) ? GAME_VERSION : cur);
+      ref.on('value', snap=>{
+        const remote = snap.val();
+        if(typeof remote === 'number' && remote > GAME_VERSION && !updatePending){
+          updatePending = true;
+          showUpdateNotice();
+        }
+      });
+    }catch(e){}
+  }
+
+  function showUpdateNotice(){
+    const el = document.getElementById('updateNotice');
+    if(!el) return;
+    el.classList.add('show');
+    // Si está en el menú, recargar enseguida; si está jugando, esperar a que termine.
+    if(!running){
+      setTimeout(forceReload, 2500);
+    }
+  }
+
+  function forceReload(){
+    try{
+      if(window.caches && caches.keys){
+        caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k))))
+          .finally(()=>{ location.replace(location.pathname + '?v=' + Date.now()); });
+        return;
+      }
+    }catch(e){}
+    location.replace(location.pathname + '?v=' + Date.now());
+  }
+
   function watchFirebaseConnection(){
     if(!FB.ready) return;
     try{
@@ -1612,6 +1766,9 @@ const Weapon3D = (function(){
       if(typeof e.webkitCompassHeading === 'number'){ h = e.webkitCompassHeading; }
       else if(e.alpha !== null){ h = 360 - e.alpha; }
       if(h !== null){ heading = (h+360)%360; headingAvailable = true; }
+      // beta = inclinación adelante/atrás. ~90° = teléfono vertical mirando al frente,
+      // valores bajos = teléfono apuntando al suelo (jugador agachado tras cobertura).
+      if(typeof e.beta === 'number'){ pitch = e.beta; pitchAvailable = true; }
     }
     if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
       try{
@@ -1788,6 +1945,10 @@ const Weapon3D = (function(){
   }
 
   function applyDamageToPlayer(dmg, sourceEnemy){
+    if(trainingMode) return;   // entrenamiento: practicar apuntar sin morir
+    // Agacharse tras cobertura reduce el daño, pero no protege del todo:
+    // sigues expuesto lo suficiente como para no poder quedarte ahí para siempre.
+    if(inCover) dmg *= COVER_REDUCTION;
     if(shield > 0){
       const fromShield = Math.min(shield, dmg);
       shield -= fromShield;
@@ -1862,6 +2023,15 @@ const Weapon3D = (function(){
     let closestVisible = null;
     const dots = [];
     const allyDots = [];
+
+    // Cobertura: si inclinas el teléfono hacia el suelo, cuentas como agachado.
+    const wasInCover = inCover;
+    inCover = pitchAvailable && !simMode && pitch < COVER_PITCH;
+    if(inCover !== wasInCover){
+      hud.classList.toggle('covered', inCover);
+      document.body.classList.toggle('covered', inCover);
+      if(inCover){ killMsg('EN COBERTURA', 'ally'); }
+    }
     const tol = w.tolerance;
 
     enemies.forEach(en=>{
@@ -2069,6 +2239,7 @@ const Weapon3D = (function(){
 
   // ---------- LEADERBOARD (shared) ----------
   async function syncLeaderboard(){
+    if(trainingMode) return;   // el entrenamiento no aparece en el marcador global
     // Con Firebase: escribimos solo NUESTRA entrada; los demás llegan por escucha
     // en tiempo real (ver attachRealtimeListeners), sin sondeo.
     if(FB.ready){
@@ -2307,6 +2478,11 @@ const Weapon3D = (function(){
   // ---------- FIRE / RELOAD ----------
   function fire(){
     if(!running || reloading) return;
+    if(inCover){
+      sfxNoAmmo();
+      killMsg('LEVÁNTATE PARA DISPARAR', 'danger');
+      return;
+    }
     const now = Date.now();
     if(now < nextFireAt) return;
     const w = weapons[currentWeapon];
@@ -2401,7 +2577,7 @@ const Weapon3D = (function(){
     const priorRank = rankFor(profile.totalKills);
     finalScore.textContent = score;
     finalWave.textContent = wave;
-    const isNewBest = score > (profile.bestScore||0);
+    const isNewBest = !trainingMode && score > (profile.bestScore||0);
     if(isNewBest) profile.bestScore = score;
     hud.classList.remove('active');
     gameOver.classList.add('active');
@@ -2415,6 +2591,10 @@ const Weapon3D = (function(){
     syncTimer = enemySyncTimer = pingTimer = pickupTimer = timeFilterTimer = null;
     dangerPulse.classList.remove('active'); heartbeatActive = false;
     closeTacticalMap();
+    inCover = false;
+    hud.classList.remove('covered');
+    document.body.classList.remove('covered');
+    if(updatePending) setTimeout(forceReload, 3000);
   }
 
   function resetState(){
@@ -2470,6 +2650,8 @@ const Weapon3D = (function(){
     if(!simMode) await syncEnemies();
     ensureEnemyCount();
     running = true;
+    const sn = document.getElementById('sysName');
+    if(sn) sn.textContent = trainingMode ? 'CENTINELA // ENTRENAMIENTO' : 'CENTINELA // ACTIVO';
     hud.classList.add('active');
     gameOver.classList.remove('active');
     lastDamageTick = performance.now();
@@ -2490,6 +2672,7 @@ const Weapon3D = (function(){
     startBtn.disabled = true; demoBtn.disabled = true;
     statusLines.innerHTML = '';
     log('Iniciando enlaces del sistema...');
+    trainingMode = false;
     const camOk = await initCamera();
     const geoOk = await initGeo();
     const oriOk = await initOrientation();
@@ -2500,16 +2683,45 @@ const Weapon3D = (function(){
 
   demoBtn.addEventListener('click', ()=>{
     ensureAudio();
+    trainingMode = false;
     simMode = true; playerPos = null;
     startScreen.style.display = 'none';
     initCamera();
     startGame();
   });
 
+  // Modo entrenamiento: mismo juego con GPS/cámara, pero sin recibir daño.
+  trainBtn.addEventListener('click', async ()=>{
+    startBtn.disabled = true; demoBtn.disabled = true; trainBtn.disabled = true;
+    statusLines.innerHTML = '';
+    log('Iniciando entrenamiento...');
+    trainingMode = true;
+    const camOk = await initCamera();
+    const geoOk = await initGeo();
+    const oriOk = await initOrientation();
+    simMode = !geoOk;
+    if(!oriOk) log('Usa el dedo para deslizar y girar la vista (sin brújula).', 'err');
+    setTimeout(()=>{ startScreen.style.display = 'none'; startGame(); }, geoOk || camOk ? 500 : 1200);
+  });
+
+  // Compartir resultado: usa el menú nativo del sistema si existe.
+  shareBtn.addEventListener('click', async ()=>{
+    const rank = rankFor(profile.totalKills);
+    const texto = 'CENTINELA — ' + rank + '\n' +
+      score + ' bajas · ola ' + wave + ' · récord ' + (profile.bestScore||0) + '\n' +
+      '¿Puedes superarme? ' + location.href.split('?')[0];
+    try{
+      if(navigator.share){ await navigator.share({ title:'CENTINELA', text: texto }); return; }
+      await navigator.clipboard.writeText(texto);
+      shareBtn.textContent = 'COPIADO ✓';
+      setTimeout(()=>{ shareBtn.textContent = 'COMPARTIR RESULTADO'; }, 2000);
+    }catch(e){ /* el usuario canceló el diálogo */ }
+  });
+
   restartBtn.addEventListener('click', async ()=>{
     gameOver.classList.remove('active');
     await loadProfile();
-    startBtn.disabled = false; demoBtn.disabled = false;
+    startBtn.disabled = false; demoBtn.disabled = false; trainBtn.disabled = false;
     statusLines.innerHTML = '';
     startScreen.style.display = 'flex';
   });

@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>CENTINELA // Protocolo de Realidad Táctica</title>
+<title>LINDERO // Protocolo de Realidad Táctica</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="manifest" href="manifest.json">
@@ -14,7 +14,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Centinela">
+<meta name="apple-mobile-web-app-title" content="Lindero">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 
@@ -648,7 +648,7 @@
 
   <h2>ZONA DE CONTENCIÓN COMPROMETIDA</h2>
   <p class="briefText">Hace seis horas, el perímetro de contención Delta-9 perdió estabilidad. Los constructos que debía vigilar comenzaron a replicarse fuera de los parámetros autorizados y a filtrarse hacia zonas habitadas. Todo equipo de reconocimiento fue evacuado antes de que se pudiera cerrar el sector.</p>
-  <p class="briefText">Los sensores detectan actividad hostil en tu posición actual — real, no simulada. El sistema Centinela que llevas puesto es la única defensa activa en tu área en este momento.</p>
+  <p class="briefText">Los sensores detectan actividad hostil en tu posición actual — real, no simulada. El sistema Lindero que llevas puesto es la única defensa activa en tu área en este momento.</p>
 
   <div class="factionSplit">
     <div class="faction alfa">
@@ -663,7 +663,7 @@
     </div>
   </div>
 
-  <p class="briefText">Ambas unidades operan sobre el mismo terreno y combaten a los mismos constructos. Pero el mando se fracturó, y ninguna de las dos reconoce ya la autoridad de la otra. Los sistemas Centinela dejaron de marcarse como aliados.</p>
+  <p class="briefText">Ambas unidades operan sobre el mismo terreno y combaten a los mismos constructos. Pero el mando se fracturó, y ninguna de las dos reconoce ya la autoridad de la otra. Los sistemas Lindero dejaron de marcarse como aliados.</p>
   <div class="briefDirective">DIRECTIVA: contener, no negociar. Cada constructo neutralizado retrasa la propagación. Si un operativo del bando contrario interfiere, tienes autorización para neutralizarlo — y el mando lo recompensa al doble. No existe un final fijo: sobrevive el mayor número de oleadas que puedas.</div>
   <p class="briefText" style="font-size:11px;opacity:0.75;">Puedes declinar el conflicto interno y operar SIN EQUIPO desde Ajustes: nadie te disparará y tú tampoco podrás disparar a otro operativo.</p>
 
@@ -718,6 +718,7 @@
     <h3>EQUIPOS Y PvP</h3>
     <p>En Ajustes puedes unirte al equipo <b>ALFA</b> o <b>BRAVO</b>. Con equipo elegido, los operativos del bando contrario aparecen como <b>objetivos rojos con ⚔</b> y puedes dispararles dentro de 120 metros. Eliminar a un jugador vale <b>el doble</b> que un hostil normal.</p>
     <p>Si eliges "SIN EQUIPO" nadie te puede disparar y tú tampoco a nadie: solo cooperativo contra la IA. Los de tu mismo equipo siguen siendo aliados azules.</p>
+    <p><b>No hay fuego amigo</b>: no puedes dañar a los de tu bando. Pero si disparas teniendo a un aliado en la mira, <b>la bala se pierde igual</b> y verás "FUEGO BLOQUEADO". Fíjate en el color antes de apretar: azul es aliado, rojo con ⚔ es rival.</p>
   </div>
 
   <div class="tutSection">
@@ -780,9 +781,9 @@
   <div class="headerBlock">
     <div class="brackets">
       <span class="bl"></span><span class="br"></span>
-      <h1>CENTINELA</h1>
+      <h1>LINDERO</h1>
     </div>
-    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.8</span></div>
+    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V5.0</span></div>
   </div>
 
   <nav id="tabBar">
@@ -894,7 +895,7 @@
   <div class="cornerFrame" id="cf-br"></div>
 
   <div id="topBar">
-    <div class="sysname" id="sysName">CENTINELA // ACTIVO</div>
+    <div class="sysname" id="sysName">LINDERO // ACTIVO</div>
     <div id="coords">LAT -- · LON --</div>
     <div id="pitchInfo"></div>
   </div>
@@ -988,8 +989,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 48;
-var GAME_VERSION_LABEL = 'V4.8';
+var GAME_VERSION = 50;
+var GAME_VERSION_LABEL = 'V5.0';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1272,10 +1273,10 @@ const Weapon3D = (function(){
   let lastKnownCell = new Map();   // id de hostil -> celda donde estaba (para poder borrarlo)
   let alliesWarned = new Map();
   let seenPings = new Set();
-  const LB_KEY = 'centinela:leaderboard';
-  const ENEMY_KEY = 'centinela:enemies';
-  const PROFILE_KEY = 'centinela:profile';
-  const PING_KEY = 'centinela:pings';
+  const LB_KEY = 'lindero:leaderboard';
+  const ENEMY_KEY = 'lindero:enemies';
+  const PROFILE_KEY = 'lindero:profile';
+  const PING_KEY = 'lindero:pings';
   const STALE_MS = 30000;
   const ENEMY_TTL_MS = 5*60*1000;
   const KILL_MEMORY_MS = 15000;
@@ -3185,7 +3186,7 @@ const Weapon3D = (function(){
     ensureEnemyCount();
     running = true;
     const sn = document.getElementById('sysName');
-    if(sn) sn.textContent = trainingMode ? 'CENTINELA // ENTRENAMIENTO' : 'CENTINELA // ACTIVO';
+    if(sn) sn.textContent = trainingMode ? 'LINDERO // ENTRENAMIENTO' : 'LINDERO // ACTIVO';
     hud.classList.add('active');
     gameOver.classList.remove('active');
     lastDamageTick = performance.now();
@@ -3241,11 +3242,11 @@ const Weapon3D = (function(){
   // Compartir resultado: usa el menú nativo del sistema si existe.
   shareBtn.addEventListener('click', async ()=>{
     const rank = rankFor(profile.totalKills);
-    const texto = 'CENTINELA — ' + rank + '\n' +
+    const texto = 'LINDERO — ' + rank + '\n' +
       score + ' bajas · ola ' + wave + ' · récord ' + (profile.bestScore||0) + '\n' +
       '¿Puedes superarme? ' + location.href.split('?')[0];
     try{
-      if(navigator.share){ await navigator.share({ title:'CENTINELA', text: texto }); return; }
+      if(navigator.share){ await navigator.share({ title:'LINDERO', text: texto }); return; }
       await navigator.clipboard.writeText(texto);
       shareBtn.textContent = 'COPIADO ✓';
       setTimeout(()=>{ shareBtn.textContent = 'COMPARTIR RESULTADO'; }, 2000);

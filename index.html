@@ -680,7 +680,7 @@
     <span class="bl"></span><span class="br"></span>
     <h1>CENTINELA</h1>
   </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.0</span></div>
+  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.2</span></div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
   <div id="mpStatus"></div>
 
@@ -836,8 +836,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 40;
-var GAME_VERSION_LABEL = 'V4.0';
+var GAME_VERSION = 42;
+var GAME_VERSION_LABEL = 'V4.2';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1555,6 +1555,7 @@ const Weapon3D = (function(){
     updateMultiplayerStatus();
     watchFirebaseConnection();
     watchVersion();
+    watchRanking();
     const upBtn = document.getElementById('updateNowBtn');
     if(upBtn && !upBtn.dataset.bound){
       upBtn.dataset.bound = '1';
@@ -2824,15 +2825,15 @@ const Weapon3D = (function(){
 
 })();
 
-// Limpia service workers y cachés previos: en GitHub Pages estaban sirviendo
-// versiones viejas del juego, lo que hacía imposible ver los cambios nuevos.
+// Registrar el service worker: es lo que permite que el navegador ofrezca
+// "Instalar app". Este worker no cachea nada (ver service-worker.js), así que
+// no puede dejar a nadie atrapado en una versión vieja.
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(regs=>{
-    regs.forEach(r=>r.unregister());
-  }).catch(()=>{});
-}
-if(window.caches && caches.keys){
-  caches.keys().then(keys=>keys.forEach(k=>caches.delete(k))).catch(()=>{});
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{
+      /* si falla, el juego sigue funcionando; solo no se podrá instalar */
+    });
+  });
 }
 </script>
 </body>

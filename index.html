@@ -170,6 +170,20 @@
     border:1px solid var(--text-dim); color:var(--text-dim); background:transparent; cursor:pointer; border-radius:2px;}
   .diffBtn.active{border-color:var(--amber); color:var(--amber); background:rgba(196,214,0,0.1);}
 
+  #rankingPanel{max-width:320px; width:100%; border:1px solid var(--gold); background:rgba(255,202,58,0.05); padding:10px; text-align:left;}
+  #rankingPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--gold); cursor:pointer; list-style:none;}
+  #rankingPanel summary::-webkit-details-marker{display:none;}
+  #rankingPanel summary::after{content:'▾'; float:right; transition:transform .2s;}
+  #rankingPanel[open] summary::after{transform:rotate(180deg);}
+  #rankingList{margin-top:8px;}
+  .rkRow{display:flex; align-items:center; gap:8px; font-size:10px; color:var(--text-dim); padding:3px 0; letter-spacing:0.5px;}
+  .rkRow .pos{width:20px; color:var(--gold); font-family:'Orbitron',sans-serif; font-weight:700;}
+  .rkRow .who{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rkRow .sc{font-family:'Orbitron',sans-serif; color:var(--text);}
+  .rkRow.me{color:var(--cyan);} .rkRow.me .sc{color:var(--cyan);}
+  .rkRow.top1 .pos{color:#ffd700;} .rkRow.top2 .pos{color:#c0c0c0;} .rkRow.top3 .pos{color:#cd7f32;}
+  .rkEmpty{color:var(--text-dim); font-style:italic; font-size:10px;}
+
   #missionsPanel{max-width:320px; width:100%; border:1px solid var(--panel-edge); background:var(--panel); padding:10px; text-align:left;}
   #missionsPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--cyan); cursor:pointer; list-style:none;}
   #missionsPanel summary::-webkit-details-marker{display:none;}
@@ -289,6 +303,7 @@
   #cf-br{bottom:14px; right:14px; border-left:none; border-top:none;}
 
   #topBar{position:absolute; top:16px; left:56px; right:56px; display:flex; justify-content:space-between; font-size:10px; letter-spacing:1.5px; color:var(--text-dim);}
+  #pitchInfo{position:absolute; top:30px; right:0; font-size:8px; color:var(--text-dim); letter-spacing:1px;}
   #topBar .sysname{color:var(--cyan); font-family:'Orbitron',sans-serif; font-weight:700; font-size:12px;}
   #coords{text-align:right;}
 
@@ -665,7 +680,7 @@
     <span class="bl"></span><span class="br"></span>
     <h1>CENTINELA</h1>
   </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V3.9</span></div>
+  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.0</span></div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
   <div id="mpStatus"></div>
 
@@ -688,6 +703,11 @@
     <label for="callsignInput">ALIAS DE OPERATIVO</label>
     <input id="callsignInput" type="text" maxlength="14" placeholder="OPERATIVO-0000">
   </div>
+
+  <details id="rankingPanel" open>
+    <summary>RANKING GLOBAL</summary>
+    <div id="rankingList"><div class="rkEmpty">cargando…</div></div>
+  </details>
 
   <details id="missionsPanel" open>
     <summary>MISIONES DE HOY</summary>
@@ -726,6 +746,7 @@
   <div id="topBar">
     <div class="sysname" id="sysName">CENTINELA // ACTIVO</div>
     <div id="coords">LAT -- · LON --</div>
+    <div id="pitchInfo"></div>
   </div>
 
   <div id="scoreWave">OLA <b id="waveNum">1</b> &nbsp;·&nbsp; BAJAS <b id="scoreNum">0</b> &nbsp;·&nbsp; AMENAZA <b id="threatNum">0</b>% &nbsp;·&nbsp; RIESGO <b id="riskNum">0</b>/5</div>
@@ -815,8 +836,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 39;
-var GAME_VERSION_LABEL = 'V3.9';
+var GAME_VERSION = 40;
+var GAME_VERSION_LABEL = 'V4.0';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1547,6 +1568,55 @@ const Weapon3D = (function(){
   // El cliente más nuevo que se conecte eleva la versión publicada. Los demás la
   // detectan y se recargan solos, así nadie queda atrapado en una versión vieja.
   let updatePending = false;
+  // ---------- RANKING GLOBAL (histórico) ----------
+  // Guarda la mejor marca de cada operativo. Solo se sobrescribe si el nuevo
+  // resultado supera al guardado, así el ranking refleja el récord de cada quien.
+  function submitToRanking(){
+    if(!FB.ready || trainingMode) return;
+    try{
+      FB.db.ref('ranking/' + callsign).transaction(cur=>{
+        if(cur && (cur.score||0) >= score) return cur;   // no bajar una marca mejor
+        return { name: callsign, score, wave, kills: profile.totalKills, ts: Date.now() };
+      });
+    }catch(e){}
+  }
+
+  function renderRanking(rows){
+    const el = document.getElementById('rankingList');
+    if(!el) return;
+    if(!rows || rows.length === 0){
+      el.innerHTML = '<div class="rkEmpty">aún no hay marcas registradas — sé el primero</div>';
+      return;
+    }
+    el.innerHTML = rows.map((r, i)=>{
+      const pos = i + 1;
+      const mine = r.name === callsign;
+      const medal = pos <= 3 ? (' top' + pos) : '';
+      const nm = r.name.length > 14 ? r.name.slice(0,13) + '…' : r.name;
+      return '<div class="rkRow' + (mine ? ' me' : '') + medal + '">' +
+             '<span class="pos">' + pos + '</span>' +
+             '<span class="who">' + nm + '</span>' +
+             '<span class="sc">' + r.score + ' · ola ' + (r.wave||1) + '</span></div>';
+    }).join('');
+  }
+
+  function watchRanking(){
+    if(!FB.ready){
+      const el = document.getElementById('rankingList');
+      if(el) el.innerHTML = '<div class="rkEmpty">sin conexión al servidor</div>';
+      return;
+    }
+    try{
+      FB.db.ref('ranking').orderByChild('score').limitToLast(10).on('value', snap=>{
+        const data = snap.val() || {};
+        const rows = Object.values(data)
+          .filter(r => r && typeof r.score === 'number')
+          .sort((a,b)=> b.score - a.score);
+        renderRanking(rows);
+      });
+    }catch(e){}
+  }
+
   function watchVersion(){
     if(!FB.ready) return;
     try{
@@ -2020,6 +2090,9 @@ const Weapon3D = (function(){
     weaponLabel.textContent = w.label;
     scoreNum.textContent = score;
     waveNum.textContent = wave;
+    const pInfo = document.getElementById('pitchInfo');
+    if(pInfo) pInfo.textContent = pitchAvailable ? ('INCLINACIÓN ' + Math.round(pitch) + '°' + (inCover ? ' · CUBIERTO' : '')) : 'SIN SENSOR DE INCLINACIÓN';
+
     const threat = threatPercent();
     threatNum.textContent = threat;
     threatNum.className = threat < 35 ? 'threat-low' : (threat < 70 ? 'threat-mid' : 'threat-high');
@@ -2597,7 +2670,7 @@ const Weapon3D = (function(){
     finalScore.textContent = score;
     finalWave.textContent = wave;
     const isNewBest = !trainingMode && score > (profile.bestScore||0);
-    if(isNewBest) profile.bestScore = score;
+    if(isNewBest){ profile.bestScore = score; submitToRanking(); }
     hud.classList.remove('active');
     gameOver.classList.add('active');
     const newRank = rankFor(profile.totalKills);

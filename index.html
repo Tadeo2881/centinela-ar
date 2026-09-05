@@ -285,6 +285,16 @@
     color:var(--amber); font-size:12px; line-height:1.6; text-align:left; padding:10px 14px; letter-spacing:0.3px;}
   #briefingScreen .briefActions{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:6px; padding-bottom:20px;}
 
+  .factionSplit{display:flex; gap:10px; max-width:420px; width:100%; margin:4px 0;}
+  .faction{flex:1; border:1px solid; padding:10px; text-align:left;}
+  .faction.alfa{border-color:var(--blue); background:rgba(47,155,255,0.07);}
+  .faction.bravo{border-color:var(--danger); background:rgba(232,17,45,0.07);}
+  .faction .fName{font-family:'Orbitron',sans-serif; font-weight:900; font-size:17px; letter-spacing:2px;}
+  .faction.alfa .fName{color:var(--blue);}
+  .faction.bravo .fName{color:var(--danger);}
+  .faction .fRole{font-size:8px; letter-spacing:2px; color:var(--text-dim); margin:2px 0 6px;}
+  .faction p{font-size:10px; line-height:1.5; color:var(--text-dim); margin:0;}
+
   .breachRing{fill:none; stroke:var(--cyan);}
   .breachRingBroken{fill:none; stroke:var(--danger); stroke-dasharray:46 14 30 18 70 10 24 20; animation:breachSpin 40s linear infinite;}
   .breachTick{stroke:var(--cyan); stroke-width:2; opacity:0.8;}
@@ -639,7 +649,23 @@
   <h2>ZONA DE CONTENCIÓN COMPROMETIDA</h2>
   <p class="briefText">Hace seis horas, el perímetro de contención Delta-9 perdió estabilidad. Los constructos que debía vigilar comenzaron a replicarse fuera de los parámetros autorizados y a filtrarse hacia zonas habitadas. Todo equipo de reconocimiento fue evacuado antes de que se pudiera cerrar el sector.</p>
   <p class="briefText">Los sensores detectan actividad hostil en tu posición actual — real, no simulada. El sistema Centinela que llevas puesto es la única defensa activa en tu área en este momento.</p>
-  <div class="briefDirective">DIRECTIVA: contener, no negociar. Cada constructo neutralizado retrasa la propagación. No existe un final fijo — sobrevive el mayor número de oleadas que puedas.</div>
+
+  <div class="factionSplit">
+    <div class="faction alfa">
+      <div class="fName">ALFA</div>
+      <div class="fRole">CONTENCIÓN</div>
+      <p>Sostiene el protocolo original: sellar la brecha, no estudiarla. Cree que cada minuto que el sector siga abierto es un minuto que la propagación gana.</p>
+    </div>
+    <div class="faction bravo">
+      <div class="fName">BRAVO</div>
+      <div class="fRole">RECUPERACIÓN</div>
+      <p>Se niega a destruir lo que hay dentro. Sostiene que los constructos guardan la única prueba de qué provocó la brecha, y que sellar el sector es enterrar la verdad.</p>
+    </div>
+  </div>
+
+  <p class="briefText">Ambas unidades operan sobre el mismo terreno y combaten a los mismos constructos. Pero el mando se fracturó, y ninguna de las dos reconoce ya la autoridad de la otra. Los sistemas Centinela dejaron de marcarse como aliados.</p>
+  <div class="briefDirective">DIRECTIVA: contener, no negociar. Cada constructo neutralizado retrasa la propagación. Si un operativo del bando contrario interfiere, tienes autorización para neutralizarlo — y el mando lo recompensa al doble. No existe un final fijo: sobrevive el mayor número de oleadas que puedas.</div>
+  <p class="briefText" style="font-size:11px;opacity:0.75;">Puedes declinar el conflicto interno y operar SIN EQUIPO desde Ajustes: nadie te disparará y tú tampoco podrás disparar a otro operativo.</p>
 
   <div class="briefActions">
     <button class="btn" id="continueBriefingBtn">ACEPTAR MISIÓN</button>
@@ -756,7 +782,7 @@
       <span class="bl"></span><span class="br"></span>
       <h1>CENTINELA</h1>
     </div>
-    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.6</span></div>
+    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.7</span></div>
   </div>
 
   <nav id="tabBar">
@@ -958,8 +984,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 46;
-var GAME_VERSION_LABEL = 'V4.6';
+var GAME_VERSION = 47;
+var GAME_VERSION_LABEL = 'V4.7';
 var FB = { ready:false, db:null };
 (function(){
   try{

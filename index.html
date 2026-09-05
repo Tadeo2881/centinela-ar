@@ -782,7 +782,7 @@
       <span class="bl"></span><span class="br"></span>
       <h1>CENTINELA</h1>
     </div>
-    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.7</span></div>
+    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.8</span></div>
   </div>
 
   <nav id="tabBar">
@@ -988,8 +988,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 47;
-var GAME_VERSION_LABEL = 'V4.7';
+var GAME_VERSION = 48;
+var GAME_VERSION_LABEL = 'V4.8';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -2444,6 +2444,7 @@ const Weapon3D = (function(){
 
     // ----- OPERATIVOS: aliados (azul) o rivales PvP (rojo, apuntables) -----
     let pvpLocked = null;
+    let allyInSights = null;
     if(!simMode && playerPos){
       Object.entries(leaderboard).forEach(([name, data])=>{
         if(name === callsign) return;
@@ -2484,6 +2485,11 @@ const Weapon3D = (function(){
             ' · ' + Math.round(ap.dist) + 'm' + far + '<br>VIDA ' + (data.health!=null ? data.health : '--') + '%</div>';
           markersLayer.appendChild(el);
         } else {
+          // Aliado en la mira: no se le puede dañar, pero lo registramos para
+          // avisar al jugador si dispara contra él por error.
+          if(Math.abs(ap.diff) <= tol && ap.dist <= PVP_RANGE){
+            if(!allyInSights || ap.dist < allyInSights.dist) allyInSights = { name, dist: ap.dist };
+          }
           const el = document.createElement('div');
           el.className = 'allyMarker' + ((data.health!=null && data.health<25) ? ' hurt' : '');
           el.style.left = ap.xPct + '%';
@@ -2495,6 +2501,7 @@ const Weapon3D = (function(){
       });
     }
     window.__lockedPlayer = pvpLocked;
+    window.__allyInSights = allyInSights;
 
     radar.querySelectorAll('.radarDot').forEach(d=>d.remove());
     dots.forEach(d=>{
@@ -2979,6 +2986,16 @@ const Weapon3D = (function(){
     currentWeapon === 'sniper' ? sfxShotHeavy() : sfxShot();
     vibrate(currentWeapon === 'sniper' ? 25 : 12);
     Weapon3D.kick();
+
+    // Fuego amigo bloqueado: si tienes un aliado en la mira y no hay ningún hostil
+    // ni rival detrás de él, el disparo se pierde. La munición SÍ se gasta: es el
+    // costo de no fijarte en el color del marcador.
+    const allySighted = window.__allyInSights;
+    if(allySighted && !window.__lockedPlayer && !window.__lockedTarget){
+      killMsg('FUEGO BLOQUEADO · ' + allySighted.name + ' ES ALIADO', 'danger');
+      vibrate(60);
+      return;   // la bala ya se descontó arriba
+    }
 
     // PvP: si hay un rival fijado, el disparo va contra él (tiene prioridad).
     const pvpTarget = window.__lockedPlayer;

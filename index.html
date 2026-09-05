@@ -203,6 +203,34 @@
   .achRow.got{color:var(--gold);}
   .achRow .mark{width:14px;}
 
+  #teamWrap{display:flex; flex-direction:column; gap:6px; align-items:center; width:100%;}
+  #teamWrap label{font-size:10px; letter-spacing:2px; color:var(--text-dim);}
+  .teamRow{display:flex; gap:8px;}
+  .teamBtn{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:1px; padding:8px 12px;
+    border:1px solid var(--text-dim); color:var(--text-dim); background:transparent; cursor:pointer; border-radius:2px;}
+  .teamBtn.active[data-team="alfa"]{border-color:var(--blue); color:var(--blue); background:rgba(47,155,255,0.12);}
+  .teamBtn.active[data-team="bravo"]{border-color:var(--danger); color:var(--danger); background:rgba(232,17,45,0.12);}
+  .teamBtn.active[data-team="none"]{border-color:var(--cyan); color:var(--cyan); background:rgba(255,122,26,0.12);}
+  .teamHint{font-size:9px; color:var(--text-dim); line-height:1.5; max-width:300px;}
+
+  /* Marcador de jugador enemigo (PvP) */
+  .pvpMarker{position:absolute; transform:translate(-50%,-50%); text-align:center; pointer-events:none;}
+  .pvpBox{width:52px; height:52px; margin:0 auto; position:relative;
+    border:2px solid var(--danger); border-radius:50%;
+    box-shadow:0 0 12px rgba(232,17,45,0.55); animation:pvpPulse 1.4s ease-in-out infinite;}
+  .pvpBox::before{content:''; position:absolute; inset:11px; border-radius:50%;
+    background:radial-gradient(circle, rgba(232,17,45,0.55), transparent 70%);}
+  @keyframes pvpPulse{0%,100%{transform:scale(1);} 50%{transform:scale(1.09);}}
+  .pvpTag{font-size:9px; color:var(--danger); letter-spacing:1px; margin-top:3px;
+    white-space:nowrap; text-shadow:0 0 6px rgba(0,0,0,0.9);}
+  .pvpMarker.locked .pvpBox{border-width:3px; box-shadow:0 0 20px rgba(232,17,45,0.95);}
+  .radarDot.pvp{background:var(--danger); width:9px; height:9px;
+    box-shadow:0 0 8px rgba(232,17,45,1); animation:pvpPulse 1.4s ease-in-out infinite;}
+  #teamBadge{position:absolute; top:44px; right:16px; font-family:'Orbitron',sans-serif;
+    font-size:10px; letter-spacing:2px; padding:3px 8px; border:1px solid currentColor; display:none;}
+  #teamBadge.alfa{color:var(--blue); display:block;}
+  #teamBadge.bravo{color:var(--danger); display:block;}
+
   #rankingPanel{max-width:320px; width:100%; border:1px solid var(--gold); background:rgba(255,202,58,0.05); padding:10px; text-align:left;}
   #rankingPanel summary{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:2px; color:var(--gold); cursor:pointer; list-style:none;}
   #rankingPanel summary::-webkit-details-marker{display:none;}
@@ -661,6 +689,12 @@
   </div>
 
   <div class="tutSection">
+    <h3>EQUIPOS Y PvP</h3>
+    <p>En Ajustes puedes unirte al equipo <b>ALFA</b> o <b>BRAVO</b>. Con equipo elegido, los operativos del bando contrario aparecen como <b>objetivos rojos con ⚔</b> y puedes dispararles dentro de 120 metros. Eliminar a un jugador vale <b>el doble</b> que un hostil normal.</p>
+    <p>Si eliges "SIN EQUIPO" nadie te puede disparar y tú tampoco a nadie: solo cooperativo contra la IA. Los de tu mismo equipo siguen siendo aliados azules.</p>
+  </div>
+
+  <div class="tutSection">
     <h3>MODO ENTRENAMIENTO</h3>
     <p>Desde la pantalla de inicio puedes entrar en entrenamiento: el juego funciona igual con cámara y GPS, pero no recibes daño. Sirve para practicar a apuntar y girarte sin morir. No cuenta para el récord ni aparece en el marcador global.</p>
   </div>
@@ -722,7 +756,7 @@
       <span class="bl"></span><span class="br"></span>
       <h1>CENTINELA</h1>
     </div>
-    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.5</span></div>
+    <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.6</span></div>
   </div>
 
   <nav id="tabBar">
@@ -784,6 +818,16 @@
       <input id="callsignInput" type="text" maxlength="14" placeholder="OPERATIVO-0000">
     </div>
 
+    <div id="teamWrap">
+      <label>EQUIPO</label>
+      <div class="teamRow">
+        <button class="teamBtn active" data-team="none">SIN EQUIPO</button>
+        <button class="teamBtn" data-team="alfa">ALFA</button>
+        <button class="teamBtn" data-team="bravo">BRAVO</button>
+      </div>
+      <div class="teamHint">Con equipo puedes disparar a operativos del bando contrario. Eliminarlos vale el doble de puntos. "Sin equipo" = solo cooperativo.</div>
+    </div>
+
     <div id="diffWrap">
       <label>DIFICULTAD</label>
       <div class="diffRow">
@@ -832,6 +876,7 @@
     <div id="lbList"></div>
   </div>
 
+  <div id="teamBadge"></div>
   <div id="killfeed"></div>
 
   <div id="markersLayer"></div>
@@ -894,6 +939,7 @@
 <!-- GAME OVER -->
 <div id="gameOver">
   <h2>UNIDAD CAÍDA</h2>
+  <div class="stat" id="killerLine"></div>
   <div class="stat">Bajas confirmadas: <b id="finalScore">0</b></div>
   <div class="stat">Ola alcanzada: <b id="finalWave">1</b></div>
   <div class="rankup" id="bestScoreLine"></div>
@@ -912,8 +958,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 45;
-var GAME_VERSION_LABEL = 'V4.5';
+var GAME_VERSION = 46;
+var GAME_VERSION_LABEL = 'V4.6';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1162,6 +1208,9 @@ const Weapon3D = (function(){
   // ---------- STATE ----------
   let simMode = false;
   let trainingMode = false;
+  let myTeam = 'none';           // 'none' | 'alfa' | 'bravo'
+  let lastKillerName = null;     // quién te eliminó (para mostrarlo al morir)
+  const PVP_RANGE = 120;         // alcance máximo para dañar a otro jugador (m)
   let playerPos = null;
   let heading = 0;
   let headingAvailable = false;
@@ -1233,7 +1282,7 @@ const Weapon3D = (function(){
   }
   const ALLY_WARN_COOLDOWN = 20000;
 
-  let profile = { totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default', gunMode:false }, missions:{date:'',list:[]}, achievements:{} };
+  let profile = { totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default', gunMode:false, team:'none' }, missions:{date:'',list:[]}, achievements:{} };
   let settings = profile.settings;
 
   const FOV = 66;
@@ -1488,6 +1537,9 @@ const Weapon3D = (function(){
     gunModeToggle.addEventListener('click', ()=>{
       settings.gunMode = !settings.gunMode;
       applyGunMode();
+    myTeam = settings.team || 'none';
+    document.querySelectorAll('.teamBtn').forEach(b=>b.classList.toggle('active', b.dataset.team === myTeam));
+    updateTeamBadge();
       saveProfile();
     });
   }
@@ -1541,6 +1593,24 @@ const Weapon3D = (function(){
                (has ? '✓' : '·') + '</span><span>' + name + '</span></div>';
       }).join('');
     }
+  }
+
+  document.querySelectorAll('.teamBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.teamBtn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      myTeam = btn.dataset.team;
+      settings.team = myTeam;
+      saveProfile();
+      updateTeamBadge();
+    });
+  });
+
+  function updateTeamBadge(){
+    const b = document.getElementById('teamBadge');
+    if(!b) return;
+    b.className = (myTeam === 'none') ? '' : myTeam;
+    b.textContent = myTeam === 'alfa' ? 'EQUIPO ALFA' : (myTeam === 'bravo' ? 'EQUIPO BRAVO' : '');
   }
 
   document.querySelectorAll('.diffBtn').forEach(btn=>{
@@ -1704,7 +1774,7 @@ const Weapon3D = (function(){
   async function loadProfile(){
     try{
       const res = await Store.get(PROFILE_KEY, false);
-      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default', gunMode:false }, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
+      if(res && res.value) profile = Object.assign({ totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default', gunMode:false, team:'none' }, missions:{date:'',list:[]}, achievements:{} }, JSON.parse(res.value));
     }catch(e){ /* first time playing */ }
     if(!profile.settings) profile.settings = { volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' };
     settings = profile.settings;
@@ -2280,6 +2350,7 @@ const Weapon3D = (function(){
     let closestVisible = null;
     const dots = [];
     const allyDots = [];
+    const pvpDots = [];
 
     // Cobertura: si inclinas el teléfono hacia el suelo, cuentas como agachado.
     const wasInCover = inCover;
@@ -2341,7 +2412,8 @@ const Weapon3D = (function(){
       pickupsLayer.appendChild(el);
     });
 
-    // ----- ALIADOS: marcador en cámara + punto en radar -----
+    // ----- OPERATIVOS: aliados (azul) o rivales PvP (rojo, apuntables) -----
+    let pvpLocked = null;
     if(!simMode && playerPos){
       Object.entries(leaderboard).forEach(([name, data])=>{
         if(name === callsign) return;
@@ -2351,22 +2423,48 @@ const Weapon3D = (function(){
         const ap = project(data.lat, data.lon, null, null);
         if(!ap) return;
 
+        // Es rival solo si ambos tienen equipo y son bandos distintos.
+        const theirTeam = data.team || 'none';
+        const isRival = myTeam !== 'none' && theirTeam !== 'none' && theirTeam !== myTeam;
+
         if(ap.dist <= MAX_RADAR_RANGE){
           const relAngle = toRad(angleDiff(ap.bearing, heading));
           const r = (ap.dist/MAX_RADAR_RANGE) * 40;
-          allyDots.push({ x:44+Math.sin(relAngle)*r, y:44-Math.cos(relAngle)*r, hurt:(data.health!=null && data.health<25) });
+          if(isRival){
+            pvpDots.push({ x:44+Math.sin(relAngle)*r, y:44-Math.cos(relAngle)*r });
+          } else {
+            allyDots.push({ x:44+Math.sin(relAngle)*r, y:44-Math.cos(relAngle)*r, hurt:(data.health!=null && data.health<25) });
+          }
         }
 
         if(!ap.visible) return;
-        const el = document.createElement('div');
-        el.className = 'allyMarker' + ((data.health!=null && data.health<25) ? ' hurt' : '');
-        el.style.left = ap.xPct + '%';
-        el.style.top = Math.max(12, ap.yPct - 14) + '%';
-        el.innerHTML = '<div class="allyChevron"></div><div class="allyTag">' + name +
-          ' · ' + Math.round(ap.dist) + 'm<br>VIDA ' + (data.health!=null ? data.health : '--') + '%</div>';
-        markersLayer.appendChild(el);
+
+        if(isRival){
+          // Objetivo PvP: se puede fijar con el retículo si está dentro del alcance.
+          const inSights = Math.abs(ap.diff) <= tol && ap.dist <= PVP_RANGE;
+          if(inSights && (!pvpLocked || ap.dist < pvpLocked.dist)){
+            pvpLocked = { name, dist: ap.dist, health: data.health };
+          }
+          const el = document.createElement('div');
+          el.className = 'pvpMarker' + (inSights ? ' locked' : '');
+          el.style.left = ap.xPct + '%';
+          el.style.top = Math.max(12, ap.yPct - 12) + '%';
+          const far = ap.dist > PVP_RANGE ? ' · FUERA DE ALCANCE' : '';
+          el.innerHTML = '<div class="pvpBox"></div><div class="pvpTag">⚔ ' + name +
+            ' · ' + Math.round(ap.dist) + 'm' + far + '<br>VIDA ' + (data.health!=null ? data.health : '--') + '%</div>';
+          markersLayer.appendChild(el);
+        } else {
+          const el = document.createElement('div');
+          el.className = 'allyMarker' + ((data.health!=null && data.health<25) ? ' hurt' : '');
+          el.style.left = ap.xPct + '%';
+          el.style.top = Math.max(12, ap.yPct - 14) + '%';
+          el.innerHTML = '<div class="allyChevron"></div><div class="allyTag">' + name +
+            ' · ' + Math.round(ap.dist) + 'm<br>VIDA ' + (data.health!=null ? data.health : '--') + '%</div>';
+          markersLayer.appendChild(el);
+        }
       });
     }
+    window.__lockedPlayer = pvpLocked;
 
     radar.querySelectorAll('.radarDot').forEach(d=>d.remove());
     dots.forEach(d=>{
@@ -2381,8 +2479,14 @@ const Weapon3D = (function(){
       el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
       radar.appendChild(el);
     });
+    pvpDots.forEach(d=>{
+      const el = document.createElement('div');
+      el.className = 'radarDot pvp';
+      el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
+      radar.appendChild(el);
+    });
 
-    reticle.classList.toggle('locked', anyLocked);
+    reticle.classList.toggle('locked', anyLocked || !!pvpLocked);
     window.__lockedTarget = anyLocked ? closestVisible : null;
   }
 
@@ -2509,7 +2613,8 @@ const Weapon3D = (function(){
         await FB.db.ref('leaderboard/' + callsign).set({
           score, wave, lastSeen: Date.now(), health: Math.round(health),
           lat: (!simMode && playerPos) ? playerPos.lat : null,
-          lon: (!simMode && playerPos) ? playerPos.lon : null
+          lon: (!simMode && playerPos) ? playerPos.lon : null,
+          team: myTeam
         });
       }catch(e){ /* sin red: seguimos jugando */ }
       return;
@@ -2747,6 +2852,46 @@ const Weapon3D = (function(){
     // Mundo compartido de hostiles: solo escuchamos las celdas de nuestra zona.
     subscribeZoneEnemies();
 
+    // Impactos recibidos de otros jugadores (PvP).
+    // Cada impacto se borra tras aplicarlo, para no volver a procesarlo.
+    FB.db.ref('hits/' + callsign).on('child_added', snap=>{
+      const h = snap.val();
+      if(!h) return;
+      try{ snap.ref.remove(); }catch(e){}
+      if(!running || trainingMode) return;
+      if(Date.now() - (h.ts||0) > 15000) return;   // impacto viejo, ignorar
+
+      lastKillerName = h.from;
+      applyDamageToPlayer(h.dmg || 10, null);
+      killMsg('IMPACTO DE ' + h.from, 'danger');
+      dmgFlash.classList.remove('show'); void dmgFlash.offsetWidth; dmgFlash.classList.add('show');
+      vibrate([70,40,70]); sfxHit(); screenShake();
+
+      // Si este golpe nos derriba, avisamos al atacante para que cobre su recompensa.
+      if(health <= 0 && FB.ready){
+        try{
+          FB.db.ref('kills/' + h.from + '/' + genId()).set({
+            victim: callsign, ts: Date.now()
+          });
+        }catch(e){}
+      }
+    });
+
+    // Confirmaciones de eliminación de rivales: recompensa doble.
+    FB.db.ref('kills/' + callsign).on('child_added', snap=>{
+      const k = snap.val();
+      if(!k) return;
+      try{ snap.ref.remove(); }catch(e){}
+      if(!running) return;
+      const bonus = Math.round(20 * riskMult().score * 2);   // doble recompensa
+      score += bonus;
+      combo++; lastKillAt = Date.now();
+      killMsg('⚔ ELIMINASTE A ' + k.victim + ' · +' + bonus, 'gold');
+      sfxKill(); vibrate([40,30,40,30,80]);
+      profile.pvpKills = (profile.pvpKills||0) + 1;
+      saveProfile();
+    });
+
     // Pings de aliados
     FB.db.ref('pings').on('child_added', snap=>{
       const p = snap.val();
@@ -2804,6 +2949,24 @@ const Weapon3D = (function(){
     currentWeapon === 'sniper' ? sfxShotHeavy() : sfxShot();
     vibrate(currentWeapon === 'sniper' ? 25 : 12);
     Weapon3D.kick();
+
+    // PvP: si hay un rival fijado, el disparo va contra él (tiene prioridad).
+    const pvpTarget = window.__lockedPlayer;
+    if(pvpTarget && FB.ready && !trainingMode){
+      const dmgP = Math.round(w.damage * (Date.now() < damageBoostUntil ? 2 : 1));
+      try{
+        const hitId = genId();
+        FB.db.ref('hits/' + pvpTarget.name + '/' + hitId).set({
+          from: callsign, dmg: dmgP, ts: Date.now(), id: hitId
+        });
+      }catch(e){}
+      showHitFeedback(dmgP, false);
+      sfxImpact(false);
+      if(pvpTarget.health != null && pvpTarget.health - dmgP <= 0){
+        killMsg('OPERATIVO ' + pvpTarget.name + ' NEUTRALIZADO', 'gold');
+      }
+      return;
+    }
 
     const target = window.__lockedTarget;
     if(target){
@@ -2899,6 +3062,8 @@ const Weapon3D = (function(){
     const priorRank = rankFor(profile.totalKills);
     finalScore.textContent = score;
     finalWave.textContent = wave;
+    const kl = document.getElementById('killerLine');
+    if(kl) kl.textContent = lastKillerName ? ('Eliminado por: ' + lastKillerName) : 'Eliminado por fuerzas hostiles';
     const isNewBest = !trainingMode && score > (profile.bestScore||0);
     if(isNewBest){ profile.bestScore = score; submitToRanking(); }
     hud.classList.remove('active');
@@ -2924,7 +3089,7 @@ const Weapon3D = (function(){
     weapons = JSON.parse(JSON.stringify(WEAPON_DEFAULTS));
     currentWeapon = 'rifle'; hud.classList.remove('scoped'); updateWeaponView();
     reloading = false; shield = 100; health = 100; score = 0; wave = 1; bossSpawnedForWave = 0;
-    combo = 0; lastKillAt = 0; damageBoostUntil = 0; shieldRegenBoostUntil = 0; nextFireAt = 0;
+    combo = 0; lastKillAt = 0; lastKillerName = null; damageBoostUntil = 0; shieldRegenBoostUntil = 0; nextFireAt = 0;
     riskLevel = 0; riskBtn.textContent = 'RIESGO 0/5'; riskBtn.disabled = false;
     recentlyKilled.clear(); lastKnownCell.clear(); alliesWarned.clear(); offscreenAlerted.clear();
   }

@@ -633,6 +633,7 @@
   <div class="tutSection">
     <h3>MULTIJUGADOR</h3>
     <p>Tu puntuación y estado se comparten. Los hostiles existen en coordenadas GPS reales: cualquier operativo cerca de ti puede ver y disparar a los mismos objetivos. Usa PING para avisarles de un peligro cercano.</p>
+    <p>El mundo se divide en <b>zonas de unos 150-200 metros</b>. Solo compartes hostiles, presencia y pings con quienes están en tu zona, así varios grupos pueden jugar a la vez en distintos lugares sin estorbarse. El ranking global sí es de todos.</p>
     <p>Tus aliados aparecen en <b>azul</b>: como flecha con su nombre y vida en la vista de cámara, como punto azul en el radar, y ubicados en el mapa táctico. Si a alguno le baja la vida de 25%, su marcador parpadea en rojo.</p>
   </div>
 
@@ -680,7 +681,7 @@
     <span class="bl"></span><span class="br"></span>
     <h1>CENTINELA</h1>
   </div>
-  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.2</span></div>
+  <div class="sub">PROTOCOLO DE REALIDAD TÁCTICA · <span id="verLabel">V4.3</span></div>
   <div id="rankLine">CARGANDO EXPEDIENTE...</div>
   <div id="mpStatus"></div>
 
@@ -836,8 +837,8 @@
 // pings). El progreso personal sigue guardándose en el dispositivo.
 // Versión del cliente. Si el servidor anuncia una más alta, el juego se recarga
 // solo para que nadie se quede jugando una versión vieja (y desincronizado).
-var GAME_VERSION = 42;
-var GAME_VERSION_LABEL = 'V4.2';
+var GAME_VERSION = 43;
+var GAME_VERSION_LABEL = 'V4.3';
 var FB = { ready:false, db:null };
 (function(){
   try{
@@ -1114,6 +1115,7 @@ const Weapon3D = (function(){
   let leaderboard = {};
   let syncTimer = null, enemySyncTimer = null, pingTimer = null, pickupTimer = null, timeFilterTimer = null;
   let recentlyKilled = new Map();
+  let lastKnownCell = new Map();   // id de hostil -> celda donde estaba (para poder borrarlo)
   let alliesWarned = new Map();
   let seenPings = new Set();
   const LB_KEY = 'centinela:leaderboard';
@@ -1124,6 +1126,36 @@ const Weapon3D = (function(){
   const ENEMY_TTL_MS = 5*60*1000;
   const KILL_MEMORY_MS = 15000;
   const ENEMY_NEARBY_RANGE = 150;
+
+  // ---------- ZONAS POR CERCANÍA ----------
+  // El mundo se divide en celdas de ~200 m. Cada jugador solo comparte hostiles y
+  // presencia con quienes están en su celda o en las 8 vecinas, y además se filtra
+  // por distancia real. Así dos grupos en ciudades distintas no se estorban.
+  const CELL_SIZE_DEG = 0.0018;   // ≈200 m de latitud
+  function cellOf(lat, lon){
+    const la = Math.floor(lat / CELL_SIZE_DEG);
+    const lo = Math.floor(lon / CELL_SIZE_DEG);
+    return la + '_' + lo;
+  }
+  function myCell(){
+    if(simMode || !playerPos) return null;
+    return cellOf(playerPos.lat, playerPos.lon);
+  }
+  function neighborCells(){
+    if(simMode || !playerPos) return [];
+    const la = Math.floor(playerPos.lat / CELL_SIZE_DEG);
+    const lo = Math.floor(playerPos.lon / CELL_SIZE_DEG);
+    const out = [];
+    for(let i=-1;i<=1;i++){
+      for(let j=-1;j<=1;j++){ out.push((la+i) + '_' + (lo+j)); }
+    }
+    return out;
+  }
+  // Distancia hasta otro jugador/objeto; se usa para filtrar dentro de la zona.
+  function withinRange(lat, lon, range){
+    if(!playerPos || lat == null || lon == null) return false;
+    return distanceMeters(playerPos.lat, playerPos.lon, lat, lon) <= (range || ENEMY_NEARBY_RANGE);
+  }
   const ALLY_WARN_COOLDOWN = 20000;
 
   let profile = { totalKills:0, bestWave:1, bestScore:0, eliteKills:0, sniperKills:0, pickupsCollected:0, rewardTokens:0, tokensSpent:0, briefingSeen:false, settings:{ volume:0.8, vibration:true, sensitivity:0.25, colorblind:false, skin:'default' }, missions:{date:'',list:[]}, achievements:{} };
@@ -2377,7 +2409,7 @@ const Weapon3D = (function(){
     if(others.length === 0){ leaderboardPanel.classList.remove('show'); return; }
     leaderboardPanel.classList.add('show');
     const maxWave = Math.max(...entries.map(e=>e[1].wave||1));
-    lbAmenaza.textContent = 'OLA MÁX ' + maxWave;
+    lbAmenaza.textContent = 'EN ZONA: ' + entries.length;
     lbList.innerHTML = entries.map(([name, data])=>{
       const mine = name === callsign;
       const danger = data.health != null && data.health < 25;
@@ -2391,18 +2423,20 @@ const Weapon3D = (function(){
     if(simMode) return;
 
     if(FB.ready){
-      // Con Firebase escribimos cada hostil por separado, así dos jugadores no se
-      // pisan la lista completa. Las bajas se propagan borrando el nodo.
+      // Cada hostil se guarda bajo la celda geográfica donde está, para que solo lo
+      // reciban los jugadores de esa zona. Las bajas se propagan borrando el nodo.
       try{
         const now = Date.now();
         const updates = {};
         enemies.forEach(en=>{
           if(recentlyKilled.has(en.id)) return;
-          updates['enemies/' + en.id] = en;
+          const cell = cellOf(en.lat, en.lon);
+          updates['zones/' + cell + '/enemies/' + en.id] = en;
         });
         recentlyKilled.forEach((t, id)=>{
-          updates['enemies/' + id] = null;         // eliminar del mundo compartido
-          if(now - t > KILL_MEMORY_MS) recentlyKilled.delete(id);
+          const dead = lastKnownCell.get(id);
+          if(dead) updates['zones/' + dead + '/enemies/' + id] = null;
+          if(now - t > KILL_MEMORY_MS){ recentlyKilled.delete(id); lastKnownCell.delete(id); }
         });
         if(Object.keys(updates).length) await FB.db.ref().update(updates);
       }catch(e){ /* sin red: seguimos con la lista local */ }
@@ -2456,7 +2490,9 @@ const Weapon3D = (function(){
       }
     }
     killMsg('PING ENVIADO: ' + text);
-    const ping = { from: callsign, text, ts: Date.now(), id: genId() };
+    const ping = { from: callsign, text, ts: Date.now(), id: genId(),
+      lat: (!simMode && playerPos) ? playerPos.lat : null,
+      lon: (!simMode && playerPos) ? playerPos.lon : null };
     if(FB.ready){
       try{ await FB.db.ref('pings/' + ping.id).set(ping); }catch(e){}
       return;
@@ -2489,6 +2525,62 @@ const Weapon3D = (function(){
     }catch(e){}
   }
 
+  // ---------- SUSCRIPCIÓN POR ZONA ----------
+  // Nos enganchamos solo a las celdas vecinas. Si el jugador camina a otra celda,
+  // soltamos las viejas y escuchamos las nuevas.
+  let zoneRefs = [];
+  let zoneCellsKey = '';
+  let zoneCache = {};   // cell -> { id: enemigo }
+
+  function subscribeZoneEnemies(){
+    if(!FB.ready || simMode) return;
+    const cells = neighborCells();
+    if(cells.length === 0) return;
+    const key = cells.join(',');
+    if(key === zoneCellsKey) return;      // ya estamos escuchando estas celdas
+    zoneCellsKey = key;
+
+    zoneRefs.forEach(r=>{ try{ r.off(); }catch(e){} });
+    zoneRefs = [];
+    zoneCache = {};
+
+    cells.forEach(cell=>{
+      const ref = FB.db.ref('zones/' + cell + '/enemies');
+      ref.on('value', snap=>{
+        zoneCache[cell] = snap.val() || {};
+        mergeZoneEnemies();
+      });
+      zoneRefs.push(ref);
+    });
+  }
+
+  function mergeZoneEnemies(){
+    if(simMode || !running) return;
+    const now = Date.now();
+    const merged = [];
+    const seen = new Set();
+    Object.values(zoneCache).forEach(cellData=>{
+      Object.keys(cellData || {}).forEach(id=>{
+        const en = cellData[id];
+        if(!en || recentlyKilled.has(id) || seen.has(id)) return;
+        if(now - (en.spawnedAt||0) > ENEMY_TTL_MS) return;
+        if(en.hp <= 0) return;
+        // Solo hostiles realmente cerca: evita ver los de la otra punta de la zona.
+        if(!withinRange(en.lat, en.lon, ENEMY_NEARBY_RANGE + 60)) return;
+        seen.add(id);
+        // Si nuestra copia local es más reciente (le acabamos de disparar), gana.
+        const local = enemies.find(e=>e.id === id);
+        merged.push(local && (local.updatedAt||0) > (en.updatedAt||0) ? local : en);
+      });
+    });
+    // Conservar los que generamos localmente y aún no se han publicado.
+    enemies.forEach(en=>{
+      if(recentlyKilled.has(en.id) || seen.has(en.id)) return;
+      merged.push(en);
+    });
+    enemies = merged;
+  }
+
   // ---------- ESCUCHA EN TIEMPO REAL (Firebase) ----------
   let realtimeAttached = false;
   function attachRealtimeListeners(){
@@ -2501,36 +2593,22 @@ const Weapon3D = (function(){
       const now = Date.now();
       const fresh = {};
       Object.keys(data).forEach(name=>{
-        if(now - (data[name].lastSeen||0) <= STALE_MS) fresh[name] = data[name];
+        const d = data[name];
+        if(!d || now - (d.lastSeen||0) > STALE_MS) return;
+        // Solo mostramos operativos de nuestra zona; el ranking global va aparte.
+        if(name !== callsign && !simMode){
+          if(d.lat == null || d.lon == null) return;
+          if(!withinRange(d.lat, d.lon, ENEMY_NEARBY_RANGE + 100)) return;
+        }
+        fresh[name] = d;
       });
       leaderboard = fresh;
       renderLeaderboard();
       checkAllies();
     });
 
-    // Mundo compartido de hostiles
-    FB.db.ref('enemies').on('value', snap=>{
-      if(simMode || !running) return;
-      const data = snap.val() || {};
-      const now = Date.now();
-      const merged = [];
-      Object.keys(data).forEach(id=>{
-        const en = data[id];
-        if(!en || recentlyKilled.has(id)) return;
-        if(now - (en.spawnedAt||0) > ENEMY_TTL_MS) return;
-        if(en.hp <= 0) return;
-        // Si tenemos una versión local más reciente (le acabamos de pegar), la conservamos.
-        const local = enemies.find(e=>e.id === id);
-        if(local && (local.updatedAt||0) > (en.updatedAt||0)) merged.push(local);
-        else merged.push(en);
-      });
-      // Conservar los recién generados por nosotros que aún no subieron.
-      enemies.forEach(en=>{
-        if(recentlyKilled.has(en.id)) return;
-        if(!merged.some(m=>m.id === en.id)) merged.push(en);
-      });
-      enemies = merged;
-    });
+    // Mundo compartido de hostiles: solo escuchamos las celdas de nuestra zona.
+    subscribeZoneEnemies();
 
     // Pings de aliados
     FB.db.ref('pings').on('child_added', snap=>{
@@ -2538,6 +2616,8 @@ const Weapon3D = (function(){
       if(!p || p.from === callsign) return;
       if(seenPings.has(p.id)) return;
       if(Date.now() - (p.ts||0) > 20000) return;
+      // Ignorar pings de jugadores que no están en nuestra zona.
+      if(!simMode && p.lat != null && p.lon != null && !withinRange(p.lat, p.lon, ENEMY_NEARBY_RANGE + 150)) return;
       seenPings.add(p.id);
       killMsg('PING · ' + p.from + ': ' + p.text, 'ally');
       vibrate(40); sfxAlert(0);
@@ -2601,6 +2681,7 @@ const Weapon3D = (function(){
         if(en.hp <= 0){
           enemies = enemies.filter(e=>e.id !== en.id);
           recentlyKilled.set(en.id, Date.now());
+          if(!simMode) lastKnownCell.set(en.id, cellOf(en.lat, en.lon));
 
           const nowK = Date.now();
           combo = (nowK - lastKillAt < COMBO_WINDOW_MS) ? combo+1 : 1;
@@ -2697,7 +2778,7 @@ const Weapon3D = (function(){
     reloading = false; shield = 100; health = 100; score = 0; wave = 1; bossSpawnedForWave = 0;
     combo = 0; lastKillAt = 0; damageBoostUntil = 0; shieldRegenBoostUntil = 0; nextFireAt = 0;
     riskLevel = 0; riskBtn.textContent = 'RIESGO 0/5'; riskBtn.disabled = false;
-    recentlyKilled.clear(); alliesWarned.clear(); offscreenAlerted.clear();
+    recentlyKilled.clear(); lastKnownCell.clear(); alliesWarned.clear(); offscreenAlerted.clear();
   }
 
   function applySelectedRewards(){
@@ -2754,7 +2835,7 @@ const Weapon3D = (function(){
     attachRealtimeListeners();
     syncLeaderboard();
     syncTimer = setInterval(syncLeaderboard, FB.ready ? 2000 : 4000);
-    if(!simMode) enemySyncTimer = setInterval(syncEnemies, FB.ready ? 1200 : 2500);
+    if(!simMode) enemySyncTimer = setInterval(()=>{ subscribeZoneEnemies(); syncEnemies(); }, FB.ready ? 1200 : 2500);
     pingTimer = setInterval(pollPings, 3500);
     pickupTimer = setInterval(()=>{ if(pickups.length<2 && Math.random()<0.7) spawnPickup(); }, 5000);
     timeFilterTimer = setInterval(applyTimeFilter, 60000);

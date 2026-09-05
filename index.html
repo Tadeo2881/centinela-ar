@@ -1070,7 +1070,10 @@ const Weapon3D = (function(){
   let headingAvailable = false;
   let pitch = 90, pitchAvailable = false;
   let inCover = false;
-  const COVER_PITCH = 40;      // por debajo de esto se considera "agachado"
+  // Umbrales con histéresis: entrar en cobertura exige inclinar bastante (35°),
+  // salir exige levantar claramente (50°). Así no parpadea al temblar la mano.
+  const COVER_ENTER = 35;
+  const COVER_EXIT  = 50;
   const COVER_REDUCTION = 0.2; // recibe solo el 20% del daño
   let enemies = [];
   let pickups = [];
@@ -1768,7 +1771,18 @@ const Weapon3D = (function(){
       if(h !== null){ heading = (h+360)%360; headingAvailable = true; }
       // beta = inclinación adelante/atrás. ~90° = teléfono vertical mirando al frente,
       // valores bajos = teléfono apuntando al suelo (jugador agachado tras cobertura).
-      if(typeof e.beta === 'number'){ pitch = e.beta; pitchAvailable = true; }
+      // La inclinación se mide distinto según la orientación de la pantalla:
+      // en vertical la da 'beta'; en horizontal la da 'gamma'. Normalizamos ambas
+      // a un mismo "pitch" donde ~90 = teléfono de frente y ~0 = apuntando al suelo.
+      const landscape = Math.abs(window.orientation || 0) === 90 ||
+                        (window.screen && window.screen.orientation &&
+                         String(window.screen.orientation.type).startsWith('landscape')) ||
+                        (window.innerWidth > window.innerHeight);
+      if(landscape){
+        if(typeof e.gamma === 'number'){ pitch = Math.abs(e.gamma); pitchAvailable = true; }
+      } else {
+        if(typeof e.beta === 'number'){ pitch = Math.abs(e.beta); pitchAvailable = true; }
+      }
     }
     if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
       try{
@@ -2026,7 +2040,12 @@ const Weapon3D = (function(){
 
     // Cobertura: si inclinas el teléfono hacia el suelo, cuentas como agachado.
     const wasInCover = inCover;
-    inCover = pitchAvailable && !simMode && pitch < COVER_PITCH;
+    if(pitchAvailable && !simMode){
+      if(!inCover && pitch < COVER_ENTER) inCover = true;
+      else if(inCover && pitch > COVER_EXIT) inCover = false;
+    } else {
+      inCover = false;
+    }
     if(inCover !== wasInCover){
       hud.classList.toggle('covered', inCover);
       document.body.classList.toggle('covered', inCover);
